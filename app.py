@@ -2,6 +2,7 @@ from flask import Flask, send_from_directory
 import os
 import logging
 from api import api
+from Ultradrive import Ultadrive
 
 FRONTEND_PATH = "static/duinoDCX_frontend/"
 
@@ -11,17 +12,23 @@ app = Flask(__name__, static_url_path="/statics")
 app.register_blueprint(api)
 
 static_files = []
+ultradrive = Ultadrive
 
 
-def fetchFrontendStatics():
+def fetch_frontend_statics():
     app.logger.info("redirecting fro frontend files: ")
     for file in os.listdir(FRONTEND_PATH):
         static_files.append(file)
         app.logger.info(f"walking {file}")
 
 
-fetchFrontendStatics()
+fetch_frontend_statics()
 app.logger.info(f"rules: {app.url_map}")
+
+
+@app.before_first_request
+def start_serial():
+    ultradrive.start()
 
 
 @app.route('/<path:path>')
