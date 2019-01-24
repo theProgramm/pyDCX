@@ -281,7 +281,7 @@ class UltradriveProtocol(Packetizer):
         asyncio.get_event_loop().stop()
 
     def data_received(self, data):
-        self.__logger.debug(f"received data: {data}")
+        self.__logger.info(f"received data: {data}")
         super(UltradriveProtocol, self).data_received(data)
 
     def handle_packet(self, packet):
