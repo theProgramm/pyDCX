@@ -136,7 +136,7 @@ class Ultadrive(threading.Thread):
     def run(self):
         asyncio.set_event_loop(asyncio.new_event_loop())
         self.__loop = asyncio.get_event_loop()
-        self.__coro = serial.aio.create_serial_connection(self.__loop, self.__protocol, '/dev/ttyS0',
+        self.__coro = serial.aio.create_serial_connection(self.__loop, self.protocol, '/dev/ttyS0',
                                                           baudrate=const.BAUD_RATE)
         try:
             self.__loop.run_until_complete(self.__coro)
