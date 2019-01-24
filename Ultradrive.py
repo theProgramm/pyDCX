@@ -105,12 +105,11 @@ class Ultadrive(threading.Thread):
 
     def resync(self):
         self.__logger.debug("resyncing...")
-        for n, d in self.__devices.items():
-            self.dump(n, 0)
+        self.__devices.clear()
+        self.search()
 
     def search(self):
         self.__logger.debug("searching...")
-        self.__devices.clear()
         self.write(b'\xF0\x00\x20\x32\x20\x0E\x40\x7F')
 
     def ping(self, device_id: int):
@@ -151,9 +150,8 @@ class Ultadrive(threading.Thread):
         self.__scheduler.start()
         self.__scheduler.add_job(self.ping_all, 'interval', seconds=const.PING_INTEVAL)
         self.__scheduler.add_job(self.resync, 'interval', seconds=const.RESYNC_INTEVAL)
-        self.__scheduler.add_job(self.search, 'interval', seconds=const.SEARCH_INTEVAL)
         atexit.register(self.stop)
-        self.__loop.call_soon(self.search())
+        self.__loop.call_soon(self.resync())
 
     def handle_packet(self, packet):
         device_id = packet[const.ID_BYTE]
