@@ -1,9 +1,11 @@
-import os
 import logging
+import os
+
 from flask import Flask, send_from_directory, request
-from const import FRONTEND_PATH
-from api import Api
+
 from Ultradrive import Ultadrive
+from api import Api
+from const import FRONTEND_PATH
 
 
 class Data:
@@ -13,8 +15,8 @@ class Data:
         logging.getLogger('flask').setLevel(logging.DEBUG)
         logging.getLogger('werkzeug').setLevel(logging.ERROR)
         logging.getLogger('flask.app.api.http').setLevel(logging.ERROR)
-
-
+        logging.getLogger('flask.app.').setLevel(logging.ERROR)
+        logging.getLogger('flask.app.api.http').setLevel(logging.ERROR)
         self.fetch_frontend_statics()
 
         self.ultradrive = Ultadrive(app.logger)

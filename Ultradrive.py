@@ -4,11 +4,10 @@ import threading
 from dataclasses import dataclass
 from typing import Dict
 
+import serial
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.jobstores.memory import MemoryJobStore
 from apscheduler.schedulers.background import BackgroundScheduler
-
-import serial
 from serial import aio
 from serial.threaded import Packetizer
 
@@ -42,9 +41,9 @@ class Device:
 class Ultadrive(threading.Thread):
     def __init__(self, logger):
         super(Ultadrive, self).__init__()
-        self.__logger = logger
+        self.__logger = logger.getChild("Ultradrive")
         self.__io_logger = logger.getChild("io")
-        self.__packet_logger = logger.getChild("io")
+        self.__packet_logger = logger.getChild("packet")
         self.__loop = None
         self.__coro = None
         self.__protocol = UltradriveProtocol(logger, self)
@@ -104,7 +103,7 @@ class Ultadrive(threading.Thread):
         self.__protocol.write(data)
 
     def ping_all(self):
-        self.__logger.debug(f"pinging all {len(self.__devices)} devices")
+        self.__io_logger.debug(f"pinging all {len(self.__devices)} devices")
         for n, d in self.__devices.items():
             self.ping(n)
 
@@ -167,6 +166,12 @@ class Ultadrive(threading.Thread):
         atexit.register(self.stop)
         self.__loop.call_soon(self.resync)
 
+    def exception_text(self, infix, actual: int, expected: int, packet):
+        text = "received malformed response - " + infix + f" has wrong length {actual} instead of {expected - 1}"
+        if self.__packet_logger.level > 10:  # 10 == DEBUG
+            text = text + str(packet)
+        return text
+
     def handle_packet(self, packet):
         self.__packet_logger.debug(f"handling packet {packet}")
         device_id = packet[const.ID_BYTE]
@@ -184,32 +189,31 @@ class Ultadrive(threading.Thread):
             if len(packet) is const.SEARCH_RESPONSE_LENGTH - 1:
                 device.search_response[:] = packet
             else:
-                raise RuntimeError("received malformed response - search response has wrong" +
-                                   f" length {len(packet)} instead" +
-                                   f" of {const.SEARCH_RESPONSE_LENGTH - 1}")
+                raise RuntimeError(
+                    self.exception_text("search response", len(packet), const.SEARCH_RESPONSE_LENGTH, packet))
         elif command is const.DUMP_RESPONSE:
             part = packet[const.PART_BYTE]
             if part is 0:
                 if len(packet) is const.PART_0_LENGTH - 1:
                     device.dump0[:] = packet
                 else:
-                    raise RuntimeError("received malformed response - dump response 0 has wrong length " +
-                                       f" {len(packet)} instead of {const.PART_0_LENGTH - 1}")
+                    raise RuntimeError(
+                        self.exception_text("dump response #0", len(packet), const.PART_0_LENGTH, packet))
             elif part is 1:
                 if len(packet) is const.PART_1_LENGTH - 1:
                     device.dump1[:] = packet
                     device.is_new = False
                 else:
-                    raise RuntimeError("received malformed response - dump response 1 has wrong length " +
-                                       f" {len(packet)} instead of {const.PART_1_LENGTH - 1}")
+                    raise RuntimeError(
+                        self.exception_text("dump response #1", len(packet), const.PART_1_LENGTH, packet))
             else:
                 raise RuntimeError(f"received malformed response - dump part is not 0 or 1 but {part}")
         elif command is const.PING_RESPONSE:
             if len(packet) is const.PING_RESPONSE_LENGTH - 1:
                 device.ping_response[:] = packet
             else:
-                raise RuntimeError("received malformed response - ping response has wrong length " +
-                                   f" {len(packet)} instead of {const.PING_RESPONSE_LENGTH - 1}")
+                raise RuntimeError(
+                    self.exception_text("ping response", len(packet), const.PING_RESPONSE_LENGTH, packet))
         elif command is const.DIRECT_COMMAND:
             return
             count = packet[const.PARAM_COUNT_BYTE]
