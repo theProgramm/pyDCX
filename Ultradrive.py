@@ -140,20 +140,22 @@ class Ultadrive(threading.Thread):
         self.write(transmit_mode_command)
 
     def run(self):
-        self.__logger.info(f"starting new ultradrive thread {self}")
+        self.__logger.info(f"starting new ultradrive thread")
         asyncio.set_event_loop(asyncio.new_event_loop())
         self.__loop = asyncio.get_event_loop()
         self.__coro = serial.aio.create_serial_connection(self.__loop, self.protocol, '/dev/ttyS0',
                                                           baudrate=const.BAUD_RATE)
         try:
+            self.__logger.debug("try connecting...")
             self.__loop.run_until_complete(self.__coro)
+            self.__logger.debug("connecting not failed")
             self.__loop.run_forever()
             self.stop()
         except serial.serialutil.SerialException as e:
             self.__logger.warn(f"Serial exception - continuing with demo data \n{e}")
             self.stop()
             self.setup_dummy_data()
-        self.__logger.info(f"stopped ultradrive thread {self}")
+        self.__logger.info(f"stopped ultradrive thread")
 
     def connection_made(self):
         self.__logger.debug("ultradrive thread recieved connection_made")
