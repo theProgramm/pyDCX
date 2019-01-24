@@ -187,8 +187,7 @@ class Ultadrive(threading.Thread):
                 raise RuntimeError("received malformed response - search response has wrong" +
                                    f" length {len(packet)} instead" +
                                    f" of {const.SEARCH_RESPONSE_LENGTH - 1}")
-
-        if command is const.DUMP_RESPONSE:
+        elif command is const.DUMP_RESPONSE:
             part = packet[const.PART_BYTE]
             if part is 0:
                 if len(packet) is const.PART_0_LENGTH - 1:
