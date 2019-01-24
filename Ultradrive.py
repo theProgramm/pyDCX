@@ -234,7 +234,7 @@ class UltradriveProtocol(Packetizer):
 
     def connection_made(self, transport):
         super(UltradriveProtocol, self).connection_made(transport)
-        self.__logger.info('port opened', transport)
+        self.__logger.info(f'port opened with transport: {transport}')
         self.__ultradrive.connection_made()
 
     def connection_lost(self, exc):
