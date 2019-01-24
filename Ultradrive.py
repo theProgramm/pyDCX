@@ -101,6 +101,8 @@ class Ultadrive(threading.Thread):
     def write(self, data):
         self.__io_logger.debug(f"serial write: {data}")
         self.__protocol.write(data)
+        self.__io_logger.debug(f"wrote data to serial: {data}")
+        return self.__protocol.transport.serial.in_waiting == 0
 
     def ping_all(self):
         self.__io_logger.debug(f"pinging all {len(self.__devices)} devices")
@@ -117,8 +119,6 @@ class Ultadrive(threading.Thread):
         self.__logger.debug("searching...")
         search_command = b'\xF0\x00\x20\x32\x20\x0E\x40' + bytes([247])
         self.write(search_command)
-        if self.__protocol.transport.serial.in_waiting == 0:
-            self.__io_logger.debug("nothing returned")
         self.__io_logger.debug("searching done")
 
     def ping(self, device_id: int):
@@ -127,15 +127,15 @@ class Ultadrive(threading.Thread):
         self.write(ping_command)
 
     def dump(self, device_id: int, part: int):
-        self.__io_logger.debug(f"requesting dump for: {device_id}")
         dump_command = b'\xF0\x00\x20\x32' + device_id.to_bytes(
             1, "big") + b'\x0E\x50\x01\x00' + part.to_bytes(1, "big") + const.TERMINATOR
         self.write(dump_command)
-        self.__io_logger.debug(f"finished dump for {device_id}")
 
     def dump_device(self, device_id: int):
+        self.__io_logger.debug(f"requesting dump for: {device_id}")
         self.dump(device_id, 0)
         self.dump(device_id, 1)
+        self.__io_logger.debug(f"finished dump for {device_id}")
 
     def set_transmit_mode(self, device_id: int):
         self.__logger.debug(f"setting transmit mode for device {device_id}")
