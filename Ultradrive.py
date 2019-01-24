@@ -181,36 +181,36 @@ class Ultadrive(threading.Thread):
             device = self.__devices[device_id]
 
         if command is const.SEARCH_RESPONSE:
-            if len(packet) is const.SEARCH_RESPONSE_LENGTH:
+            if len(packet) is const.SEARCH_RESPONSE_LENGTH - 1:
                 device.search_response[:] = packet
             else:
                 raise RuntimeError("received malformed response - search response has wrong" +
                                    f" length {len(packet)} instead" +
-                                   f" of {const.SEARCH_RESPONSE_LENGTH}")
+                                   f" of {const.SEARCH_RESPONSE_LENGTH - 1}")
 
         if command is const.DUMP_RESPONSE:
             part = packet[const.PART_BYTE]
             if part is 0:
-                if len(packet) is const.PART_0_LENGTH:
+                if len(packet) is const.PART_0_LENGTH - 1:
                     device.dump0[:] = packet
                 else:
                     raise RuntimeError("received malformed response - dump response 0 has wrong length " +
-                                       f" {len(packet)} instead of {const.PART_0_LENGTH}")
+                                       f" {len(packet)} instead of {const.PART_0_LENGTH - 1}")
             elif part is 1:
-                if len(packet) is const.PART_1_LENGTH:
+                if len(packet) is const.PART_1_LENGTH - 1:
                     device.dump1[:] = packet
                     device.is_new = False
                 else:
                     raise RuntimeError("received malformed response - dump response 1 has wrong length " +
-                                       f" {len(packet)} instead of {const.PART_1_LENGTH}")
+                                       f" {len(packet)} instead of {const.PART_1_LENGTH - 1}")
             else:
                 raise RuntimeError(f"received malformed response - dump part is not 0 or 1 but {part}")
         elif command is const.PING_RESPONSE:
-            if len(packet) is const.PING_RESPONSE_LENGTH:
+            if len(packet) is const.PING_RESPONSE_LENGTH - 1:
                 device.ping_response[:] = packet
             else:
                 raise RuntimeError("received malformed response - ping response has wrong length " +
-                                   f" {len(packet)} instead of {const.PING_RESPONSE_LENGTH}")
+                                   f" {len(packet)} instead of {const.PING_RESPONSE_LENGTH - 1}")
         elif command is const.DIRECT_COMMAND:
             return
             count = packet[const.PARAM_COUNT_BYTE]
