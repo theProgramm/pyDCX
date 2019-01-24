@@ -119,6 +119,7 @@ class Ultadrive(threading.Thread):
         self.write(search_command)
         if self.__protocol.transport.serial.in_waiting == 0:
             self.__io_logger.debug("nothing returned")
+        self.__io_logger.debug("searching done")
 
     def ping(self, device_id: int):
         ping_command = b'\xF0\x00\x20\x32' + device_id.to_bytes(
@@ -126,10 +127,11 @@ class Ultadrive(threading.Thread):
         self.write(ping_command)
 
     def dump(self, device_id: int, part: int):
-        self.__logger.debug(f"requesting dump for: {device_id} {part}")
+        self.__io_logger.debug(f"requesting dump for: {device_id}")
         dump_command = b'\xF0\x00\x20\x32' + device_id.to_bytes(
             1, "big") + b'\x0E\x50\x01\x00' + part.to_bytes(1, "big") + const.TERMINATOR
         self.write(dump_command)
+        self.__io_logger.debug(f"finished dump for {device_id}")
 
     def dump_device(self, device_id: int):
         self.dump(device_id, 0)
