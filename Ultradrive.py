@@ -184,7 +184,9 @@ class Ultadrive(threading.Thread):
             if len(packet) is const.SEARCH_RESPONSE_LENGTH:
                 device.search_response[:] = packet
             else:
-                raise RuntimeError("received malformed response")
+                raise RuntimeError("received malformed response - search response has wrong" +
+                                   f" length {len(packet)} instead" +
+                                   f" of {const.SEARCH_RESPONSE_LENGTH}")
 
         if command is const.DUMP_RESPONSE:
             part = packet[const.PART_BYTE]
@@ -192,20 +194,23 @@ class Ultadrive(threading.Thread):
                 if len(packet) is const.PART_0_LENGTH:
                     device.dump0[:] = packet
                 else:
-                    raise RuntimeError("received malformed response")
+                    raise RuntimeError("received malformed response - dump response 0 has wrong length " +
+                                       f" {len(packet)} instead of {const.PART_0_LENGTH}")
             elif part is 1:
                 if len(packet) is const.PART_1_LENGTH:
                     device.dump1[:] = packet
                     device.is_new = False
                 else:
-                    raise RuntimeError("received malformed response")
+                    raise RuntimeError("received malformed response - dump response 1 has wrong length " +
+                                       f" {len(packet)} instead of {const.PART_1_LENGTH}")
             else:
-                raise RuntimeError("received malformed response")
+                raise RuntimeError(f"received malformed response - dump part is not 0 or 1 but {part}")
         elif command is const.PING_RESPONSE:
             if len(packet) is const.PING_RESPONSE_LENGTH:
                 device.ping_response[:] = packet
             else:
-                raise RuntimeError("recieved malformed response")
+                raise RuntimeError("received malformed response - ping response has wrong length " +
+                                   f" {len(packet)} instead of {const.PING_RESPONSE_LENGTH}")
         elif command is const.DIRECT_COMMAND:
             return
             count = packet[const.PARAM_COUNT_BYTE]
@@ -223,7 +228,7 @@ class Ultadrive(threading.Thread):
                 elif channel <= 10:
                     self.patchBuffer(device_id, value_low, value_high, self.outputLocations[channel - 5][param - 2])
         else:
-            raise RuntimeError("recieved malformed response")
+            raise RuntimeError(f"received malformed response - unrecognized command {command}")
 
 
 class Echo(serial.threaded.Protocol):
