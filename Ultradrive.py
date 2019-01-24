@@ -4,12 +4,14 @@ import threading
 from dataclasses import dataclass
 from typing import Dict
 
-import serial
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.jobstores.memory import MemoryJobStore
 from apscheduler.schedulers.background import BackgroundScheduler
+
+import serial
 from serial import aio
 from serial.threaded import Packetizer
+from serial.serialutil import SerialException
 
 import const
 
@@ -78,6 +80,7 @@ class Ultadrive(threading.Thread):
         if self.__scheduler is not None and self.__scheduler.running:
             self.__scheduler.shutdown(wait=False)
 
+    # noinspection PyPep8
     def setup_dummy_data(self):
         self.__devices[0] = Device(0)
         self.__devices[1] = Device(1)
@@ -113,24 +116,24 @@ class Ultadrive(threading.Thread):
         self.write(b'\xF0\x00\x20\x32\x20\x0E\x40\x7F')
 
     def ping(self, device_id: int):
-        pingCommand = b'\xF0\x00\x20\x32' + device_id.to_bytes(
-            1) + b'\x0E\x44\x00\x00' + const.TERMINATOR
-        self.write(pingCommand)
+        ping_command = b'\xF0\x00\x20\x32' + device_id.to_bytes(
+            1, "big") + b'\x0E\x44\x00\x00' + const.TERMINATOR
+        self.write(ping_command)
 
     def dump(self, device_id: int, part: int):
-        dumpCommand = b'\xF0\x00\x20\x32' + device_id.to_bytes(
-            1) + b'\x0E\x50\x01\x00' + part.to_bytes(1) + const.TERMINATOR
-        self.write(dumpCommand)
+        dump_command = b'\xF0\x00\x20\x32' + device_id.to_bytes(
+            1, "big") + b'\x0E\x50\x01\x00' + part.to_bytes(1, "big") + const.TERMINATOR
+        self.write(dump_command)
 
-    def dump(self, device_id: int):
+    def dump_device(self, device_id: int):
         self.dump(device_id, 0)
         self.dump(device_id, 1)
 
-    def setTransmitMode(self, device_id: int):
+    def set_transmit_mode(self, device_id: int):
         self.__logger.debug(f"setting transmit mode for device {device_id}")
-        transmitModeCommand = b'\xF0\x00\x20\x32' + device_id.to_bytes(
-            1) + b'\x0E\x3F\x0C\x00' + const.TERMINATOR
-        self.write(transmitModeCommand)
+        transmit_mode_command = b'\xF0\x00\x20\x32' + device_id.to_bytes(
+            1, "big") + b'\x0E\x3F\x0C\x00' + const.TERMINATOR
+        self.write(transmit_mode_command)
 
     def run(self):
         asyncio.set_event_loop(asyncio.new_event_loop())
@@ -158,12 +161,12 @@ class Ultadrive(threading.Thread):
         command = packet[const.COMMAND_BYTE]
 
         if device_id not in self.__devices:
-            self.__logger
+            self.__packet_logger.debug(f"recived {command} from unknown device_id: {device_id}")
             device = Device(device_id)
             self.__devices[device_id] = device
-            self.dump(device_id)
+            self.dump_device(device_id)
         else:
-            device = self.devices[device_id]
+            device = self.__devices[device_id]
 
         if command is const.SEARCH_RESPONSE:
             if len(packet) is const.SEARCH_RESPONSE_LENGTH:
@@ -198,15 +201,15 @@ class Ultadrive(threading.Thread):
                 offset = 4 * i
                 channel = packet[const.CHANNEL_BYTE + offset]
                 param = packet[const.PARAM_BYTE + offset]
-                valueHigh = packet[const.VALUE_HI_BYTE + offset]
-                valueLow = packet[const.VALUE_LOW_BYTE + offset]
+                value_high = packet[const.VALUE_HI_BYTE + offset]
+                value_low = packet[const.VALUE_LOW_BYTE + offset]
                 if channel == 0:
-                    self.patchBuffer(device_id, valueLow, valueHigh,
+                    self.patchBuffer(device_id, value_low, value_high,
                                      self.setupLocations[param - (11 if param <= 11 else 10)])
                 elif channel <= 4:
-                    self.patchBuffer(device_id, valueLow, valueHigh, self.inputLocations[channel - 1][param - 2])
+                    self.patchBuffer(device_id, value_low, value_high, self.inputLocations[channel - 1][param - 2])
                 elif channel <= 10:
-                    self.patchBuffer(device_id, valueLow, valueHigh, self.outputLocations[channel - 5][param - 2])
+                    self.patchBuffer(device_id, value_low, value_high, self.outputLocations[channel - 5][param - 2])
         else:
             raise RuntimeError("recieved malformed response")
 
