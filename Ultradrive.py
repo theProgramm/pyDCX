@@ -168,7 +168,7 @@ class Ultadrive(threading.Thread):
         self.__loop.call_soon(self.resync)
 
     def handle_packet(self, packet):
-        self.__packet_logger.debuf(f"handling packet {packet}")
+        self.__packet_logger.debug(f"handling packet {packet}")
         device_id = packet[const.ID_BYTE]
         command = packet[const.COMMAND_BYTE]
 
