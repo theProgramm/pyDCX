@@ -14,6 +14,7 @@ from serial.threaded import Packetizer
 
 import const
 
+from echo import Echo
 
 @dataclass
 class Device:
@@ -47,7 +48,7 @@ class Ultadrive(threading.Thread):
         self.__packet_logger = logger.getChild("io")
         self.__loop = None
         self.__coro = None
-        self.__protocol = UltradriveProtocol(logger, self)
+        self.__protocol = Echo()
         self.__devices = dict()
 
         jobstores = {
