@@ -14,7 +14,6 @@ from serial.threaded import Packetizer
 
 import const
 
-from echo import Echo
 
 @dataclass
 class Device:
@@ -48,7 +47,7 @@ class Ultadrive(threading.Thread):
         self.__packet_logger = logger.getChild("io")
         self.__loop = None
         self.__coro = None
-        self.__protocol = Echo()
+        self.__protocol = Echo(logger, self)
         self.__devices = dict()
 
         jobstores = {
@@ -223,6 +222,33 @@ class Ultadrive(threading.Thread):
                     self.patchBuffer(device_id, value_low, value_high, self.outputLocations[channel - 5][param - 2])
         else:
             raise RuntimeError("recieved malformed response")
+
+
+class Echo(serial.threaded.Protocol):
+    transport = None
+
+    def __init__(self, logger, ultradrive: Ultadrive):
+        super(Echo, self).__init__()
+        self.__logger = logger.getChild("echo_protocol")
+        self.__ultradrive = ultradrive
+
+    def connection_made(self, transport):
+        self.transport = transport
+        self.__logger.info(f'port opened with transport: {transport}')
+        self.__ultradrive.connection_made()
+
+    def data_received(self, data):
+        self.__logger.debug(f"received data: {data}")
+
+    def connection_lost(self, exc):
+        print(f"lost connection: {exc}")
+        self.__logger.info(f"connection on port lost {exec}")
+        self.__ultradrive.stop()
+
+    def write(self, data):
+        while self.transport.serial.in_waiting > 0:
+            pass
+        self.transport.write(data)
 
 
 class UltradriveProtocol(Packetizer):
