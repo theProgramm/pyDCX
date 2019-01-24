@@ -61,8 +61,10 @@ class Ultadrive(threading.Thread):
             'max_instances': 1
         }
         self.__scheduler = BackgroundScheduler(jobstores=jobstores, executors=executors, job_defaults=job_defaults)
+        self.__logger.debug(f"created new Ultradrive thread {self}")
 
     def protocol(self):
+        self.__logger.debug(f"requesting protocol {self.__protocol}")
         return self.__protocol
 
     def devices(self) -> Dict[int, Device]:
@@ -72,6 +74,7 @@ class Ultadrive(threading.Thread):
         return self.__devices[n]
 
     def stop(self):
+        self.__logger.debug(f"stoppgin ultradrive thread {self}")
         if self.__loop is not None:
             self.__loop.stop()
             self.__coro = None
@@ -121,6 +124,7 @@ class Ultadrive(threading.Thread):
         self.write(ping_command)
 
     def dump(self, device_id: int, part: int):
+        self.__logger.debug(f"requesting dump for: {device_id} {part}")
         dump_command = b'\xF0\x00\x20\x32' + device_id.to_bytes(
             1, "big") + b'\x0E\x50\x01\x00' + part.to_bytes(1, "big") + const.TERMINATOR
         self.write(dump_command)
@@ -136,6 +140,7 @@ class Ultadrive(threading.Thread):
         self.write(transmit_mode_command)
 
     def run(self):
+        self.__logger.info(f"starting new ultradrive thread {self}")
         asyncio.set_event_loop(asyncio.new_event_loop())
         self.__loop = asyncio.get_event_loop()
         self.__coro = serial.aio.create_serial_connection(self.__loop, self.protocol, '/dev/ttyS0',
@@ -143,13 +148,15 @@ class Ultadrive(threading.Thread):
         try:
             self.__loop.run_until_complete(self.__coro)
             self.__loop.run_forever()
-            self.__loop.close()
+            self.stop()
         except serial.serialutil.SerialException as e:
             self.__logger.warn(f"Serial exception - continuing with demo data \n{e}")
             self.stop()
             self.setup_dummy_data()
+        self.__logger.info(f"stopped ultradrive thread {self}")
 
     def connection_made(self):
+        self.__logger.debug("ultradrive thread recieved connection_made")
         self.__scheduler.start()
         self.__scheduler.add_job(self.ping_all, 'interval', seconds=const.PING_INTEVAL)
         self.__scheduler.add_job(self.resync, 'interval', seconds=const.RESYNC_INTEVAL)
@@ -157,11 +164,12 @@ class Ultadrive(threading.Thread):
         self.__loop.call_soon(self.resync())
 
     def handle_packet(self, packet):
+        self.__packet_logger.debuf(f"handling packet {packet}")
         device_id = packet[const.ID_BYTE]
         command = packet[const.COMMAND_BYTE]
 
         if device_id not in self.__devices:
-            self.__packet_logger.debug(f"recived {command} from unknown device_id: {device_id}")
+            self.__packet_logger.info(f"received {command} from unknown device_id: {device_id}")
             device = Device(device_id)
             self.__devices[device_id] = device
             self.dump_device(device_id)
@@ -172,7 +180,7 @@ class Ultadrive(threading.Thread):
             if len(packet) is const.SEARCH_RESPONSE_LENGTH:
                 device.search_response[:] = packet
             else:
-                raise RuntimeError("recieved malformed response")
+                raise RuntimeError("received malformed response")
 
         if command is const.DUMP_RESPONSE:
             part = packet[const.PART_BYTE]
@@ -180,15 +188,15 @@ class Ultadrive(threading.Thread):
                 if len(packet) is const.PART_0_LENGTH:
                     device.dump0[:] = packet
                 else:
-                    raise RuntimeError("recieved malformed response")
+                    raise RuntimeError("received malformed response")
             elif part is 1:
                 if len(packet) is const.PART_1_LENGTH:
                     device.dump1[:] = packet
                     device.is_new = False
                 else:
-                    raise RuntimeError("recieved malformed response")
+                    raise RuntimeError("received malformed response")
             else:
-                raise RuntimeError("recieved malformed response")
+                raise RuntimeError("received malformed response")
         elif command is const.PING_RESPONSE:
             if len(packet) is const.PING_RESPONSE_LENGTH:
                 device.ping_response[:] = packet
