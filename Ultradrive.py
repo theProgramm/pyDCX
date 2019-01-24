@@ -279,12 +279,12 @@ class UltradriveProtocol(Packetizer):
             self.__ultradrive.handle_packet(packet)
 
     def write(self, data):
-        self.__logger("waiting for empty in_waiting before write")
+        self.__logger.debug("waiting for empty in_waiting before write")
         while self.transport.serial.in_waiting > 0:
             pass
-        self.__logger(f"finnaly writing {data}")
+        self.__logger.debug(f"finnaly writing {data}")
         written = self.transport.write(data)
-        self.__logger(f"wrote  {written}")
+        self.__logger.debug(f"wrote  {written}")
 
 #
 # void Ultradrive::processIncoming(unsigned long now) {
