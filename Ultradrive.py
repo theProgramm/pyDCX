@@ -277,7 +277,7 @@ class UltradriveProtocol(Packetizer):
 
     def handle_packet(self, packet):
         self.__logger.debug(f"received package: {packet}")
-        if not packet.startswith(const.VENDOR_HEADER):
+        if packet.startswith(const.VENDOR_HEADER):
             self.__ultradrive.handle_packet(packet)
         else:
             self.__logger.warn(f"package without vendor header received {packet}")
