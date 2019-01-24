@@ -11,7 +11,6 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import serial
 from serial import aio
 from serial.threaded import Packetizer
-from serial.serialutil import SerialException
 
 import const
 
@@ -102,7 +101,7 @@ class Ultadrive(threading.Thread):
         self.__protocol.write(data)
 
     def ping_all(self):
-        self.__logger.debug("pinging...")
+        self.__logger.debug(f"pinging all {len(self.__devices)} devices")
         for n, d in self.__devices.items():
             self.ping(n)
 
@@ -113,6 +112,7 @@ class Ultadrive(threading.Thread):
 
     def search(self):
         self.__logger.debug("searching...")
+        search_command = b'\xF0\x00\x20\x32\x20\x0E\x40' + bytes([247])
         self.write(b'\xF0\x00\x20\x32\x20\x0E\x40\x7F')
 
     def ping(self, device_id: int):

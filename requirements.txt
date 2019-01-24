@@ -1,4 +1,3 @@
-serial
 APScheduler==3.5.3
 blueprint==3.4.2
 Click==7.0
