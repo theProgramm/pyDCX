@@ -232,6 +232,9 @@ class UltradriveProtocol(Packetizer):
         self.__logger.info(f"connection on port lost {exec}")
         asyncio.get_event_loop().stop()
 
+    def data_received(self, data):
+        self.__logger.debug(f"received data: {data}")
+
     def handle_packet(self, packet):
         self.__logger.debug(f"recived package: {packet}")
         if not packet.startswith(const.VENDOR_HEADER):
