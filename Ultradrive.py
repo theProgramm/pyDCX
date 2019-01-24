@@ -279,6 +279,8 @@ class UltradriveProtocol(Packetizer):
             self.__ultradrive.handle_packet(packet)
 
     def write(self, data):
+        while self.transport.serial.in_waiting > 0:
+            pass
         self.transport.write(data)
 
 #
