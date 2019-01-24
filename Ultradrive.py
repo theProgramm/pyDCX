@@ -1,76 +1,245 @@
 import asyncio
-from dataclasses import dataclass
+import atexit
+from datetime import datetime, timedelta
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.jobstores.memory import MemoryJobStore
+from apscheduler.executors.pool import ThreadPoolExecutor
 import threading
+from dataclasses import dataclass
+from functools import partial
+from typing import Dict
+
 import serial
-import const
+from serial import aio
 from serial.threaded import Packetizer
 
-from app import app
+import const
 
 
 @dataclass
 class Device:
-    isNew: bool
-    invalidateSync: bool
-    dumpStarted: bool
     dump0: bytearray
     dump1: bytearray
-    searchResponse: bytearray
-    pingResponse: bytearray
-    lastPong: int
-    lastPing: int
-    lastResync: int
+    search_response: bytearray
+    ping_response: bytearray
+    device_id: int
+    is_new: bool = True
+
+    def __init__(self, device_id: int):
+        self.dump0: bytearray = bytearray(const.PART_0_LENGTH)
+        self.dump1: bytearray = bytearray(const.PART_1_LENGTH)
+        self.search_response: bytearray = bytearray(const.SEARCH_RESPONSE_LENGTH)
+        self.ping_response: bytearray = bytearray(const.PING_RESPONSE_LENGTH)
+        self.device_id = device_id
+
+    def to_gui(self) -> bytearray:
+        ret = bytearray()
+        ret.extend(self.dump0)
+        ret.extend(self.dump1)
+        ret.extend(self.ping_response)
+        return ret
 
 
 class Ultadrive(threading.Thread):
-    def __init__(self):
+    def __init__(self, logger):
+        super(Ultadrive, self).__init__()
+        self.__logger = logger
+        self.__io_logger = logger.getChild("io")
+        self.__packet_logger = logger.getChild("io")
         self.__loop = None
         self.__coro = None
-        self.__devices = {k: Device for k in range(const.MAX_DEVICES)}
-        super(Ultadrive, self).__init__()
+        self.protocol = UltradriveProtocol(logger, self)
+        self.__devices = dict()
 
-    def devices(self):
+        jobstores = {
+            'default': MemoryJobStore()
+        }
+        executors = {
+            'default': ThreadPoolExecutor(1),
+        }
+        job_defaults = {
+            'coalesce': True,
+            'max_instances': 1
+        }
+        self.__scheduler = BackgroundScheduler(jobstores=jobstores, executors=executors, job_defaults=job_defaults)
+
+    def protocol(self):
+        return self.protocol
+
+    def devices(self) -> Dict[int, Device]:
         return self.__devices
 
-    def device(self, n: int):
+    def device(self, n: int) -> Device:
         return self.__devices[n]
 
-    def isOpen(self):
-        return self.__loop is not None
-
     def stop(self):
-        if self.isOpen():
+        if self.__loop is not None:
             self.__loop.stop()
             self.__coro = None
             self.__loop = None
+        if self.__scheduler is not None and self.__scheduler.running:
+            self.__scheduler.shutdown(wait=False)
+
+    def setup_dummy_data(self):
+        self.__devices[0] = Device(0)
+        self.__devices[1] = Device(1)
+        self.devices()[
+            0].dump0 = b'\xf0\x00 2\x00\x0e\x10\x01\x01\x00\x02\x00\x00n\x06\x00\x00\x00\x00\x00\x00XPCR\x01\x00\x11\x00\x01^\x06\x00\x00XP\x00RB\x01\x00\x11\x01\x1a\x00\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x01\x00\x01\x00D\x00CX2496 \x00       \x00 \'/-=XC\x1eUR\x01\x00\x11\x01|@\x05\x00\x00\x00\x00\x00\x00\x00\x01\x002*3WA\x00Y  \x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x01\x00\x01\x00\x00\x00\x00\x01\x00\x01\x00\'\x00\x16@\x00\x16\x00\x16\x00>\x00*\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00S\x00\x00\x17\x00\x05\x00X\x02\x00\x01\x004\x00\x14\x00\x16\x00"\x01\x00\x01\x004\x00\x14\x10\x00\x00\x01\x01\x00\x01\x00\x00`\x00\x14\x00=\x00\x01\x10\x00\x01\x004\x00\x14\x00\x08\x16\x00\x01\x00\x01\x004A\x00\x14\x00\x16\x00\x01\x00\x08\x01\x004\x00\x14\x00\x16D\x00\x01\x00\x01\x004\x00 \x14\x00\x16\x00\x01\x00\x01\x04\x004\x00\x14\x00\x16\x00"\x01\x00\x01\x004\x00\x14\x10\x00\x16\x00\x01\x00\x01\x00\x024\x00\x14\x00\x16\x00\x01\x11\x00\x01\x00>\x00\x00\x00\x08\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00S\x00\x17\x00 \x05\x00X\x02\x00\x004@\x00\x14\x00\x16\x00\x01\x00\x08\x01\x004\x00\x14\x00\x00\x04\x01\x01\x00\x01\x00`\x00\x00\x14\x00=\x00\x01\x00\x01\x04\x004\x00\x14\x00\x16\x00"\x01\x00\x01\x004\x00\x14\x10\x00\x16\x00\x01\x00\x01\x00\x024\x00\x14\x00\x16\x00\x01\x11\x00\x01\x004\x00\x14\x00\x08\x16\x00\x01\x00\x01\x004A\x00\x14\x00\x16\x00\x01\x00\x08\x01\x004\x00\x14\x00\x16D\x00\x01\x00\x01\x004\x00 \x14\x00\x16\x00\x01\x00\x01\x04\x00\x16\x00\x00\x00\x00\x00\x02\x00\x00\x01\x00\x00\x00\x00\x00\x00S\x00\x17\x00\x05\x00\x08X\x02\x00\x004\x00\x14\x10\x00\x16\x00\x01\x00\x01\x00\x02/\x01\x14\x00\x00\x00\x01\x00\x00\x01\x004\x00\x14\x00\x08\x16\x00\x01\x00\x01\x004A\x00\x14\x00\x16\x00\x01\x00\x08\x01\x004\x00\x14\x00\x16D\x00\x01\x00\x01\x004\x00 \x14\x00\x16\x00\x01\x00\x01\x04\x004\x00\x14\x00\x16\x00"\x01\x00\x01\x004\x00\x14\x10\x00\x16\x00\x01\x00\x01\x00\x024\x00\x14\x00\x16\x00\x01\x11\x00\x01\x004\x00\x14\x00\x08\x16\x00\x01\x00\x01\x00\x16A\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00S\x00\x00\x17\x00\x05\x00X\x02\x02\x00\x004\x00\x14\x00\x16D\x00\x01\x00\x01\x004\x00 \x14\x00,\x01\x00\x00\x00\x00\x004\x00\x14\x00\x16\x00"\x01\x00\x01\x004\x00\x14\x10\x00\x16\x00\x01\x00\x01\x00\x024\x00\x14\x00\x16\x00\x01\x11\x00\x01\x004\x00\x14\x00\x08\x16\x00\x01\x00\x01\x004A\x00\x14\x00\x16\x00\x01\x00\x08\x01\x004\x00\x14\x00\x16D\x00\x01\x00\x01\x004\x00 \x14\x00\x16\x00\x01\x00\x01\x04\x004\x00\x14\x00\x16\x00"\x01\x00\x01\x00$\x00\x01\x10\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00S\x00\x17@\x00\x05\x00X\x02\x00\x00\x004\x00\x14\x00\x16\x00\x01\x11\x00\x01\x00\x05\x00\x14\x00\x00\x00\x00\x01\x00\x01\x004@\x00\x14\x00\x16\x00\x01\x00\x08\x01\x004\x00\x14\x00\x16D\x00\x01\x00\x01\x004\x00 \x14\x00\x16\x00\x01\x00\x01\x04\x004\x00\x14\x00\x16\x00"\x01\x00\x01\x004\x00\x14\x10\x00\x16\x00\x01\x00\x01\x00\x024\x00\x14\x00\x16\x00\x01\x11\x00\x01\x004\x00\x14\x00\x08\x16\x00\x01\x00\x01\x004A\x00\x14\x00\x16\x00\x01\x00\x08\x01\x00\t\x00\x00\x00\x06\x00\x00\x00\x00\x06\x00|\x00\x00\x00\x00p\x00\r\x00\x00\x14\x00\x00\x00\x00\x00$\x00 \x01\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00S\x00\x00\x17\x00\x05\x00X\x02\x00\x01\x004\x00\x14\x00\x16\x00"\x01\x00\x01\x00\x05\x00\x14\x00\x00\x00\x00\x01\x00\x01\x00\x004\x00\x14\x00\x16\x00\x01\x11\x00\x01\x004\x00\x14\x00\x08\x16\x00\x01\x00\x01\x004A\x00\x14\x00\x16\x00\x01\x00\x08\x01\x004\x00\x14\x00\x16D\x00\x01\x00\x01\x004\x00 \x14\x00\x16\x00\x01\x00\x01\x04\x004\x00\x14\x00\x16\x00"\x01\x00\x01\x004\x00\x14\x10\x00\x16\x00\x01\x00\x01\x00\x026\xf7'
+        self.devices()[
+            0].dump1 = b'\xf0\x00 2\x00\x0e\x10\x01\x01\x00\x02\x00\x014\x00\x14\x00\x16\x00\x01\x11\x00\x01\x00\x10\x00\x01\x00\x00\x06\x00\x00\x00\x06\x00|\x00\x00\x00\x00p\x00\r\x00(\x00\x00\x00\x00\x00\x00\x04@\x00\x01\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00S\x00\x00\x17\x00\x05\x00X\x02\x02\x00\x004\x00\x14\x00\x16D\x00\x01\x00\x01\x004\x00 \x14\x00,\x01\x01\x00\x01\x00\x004\x00\x14\x00\x16\x00"\x01\x00\x01\x004\x00\x14\x10\x00\x16\x00\x01\x00\x01\x00\x024\x00\x14\x00\x16\x00\x01\x11\x00\x01\x004\x00\x14\x00\x08\x16\x00\x01\x00\x01\x004A\x00\x14\x00\x16\x00\x01\x00\x08\x01\x004\x00\x14\x00\x16D\x00\x01\x00\x01\x004\x00 \x14\x00\x16\x00\x01\x00\x01\x04\x004\x00\x14\x00\x16\x00"\x01\x00\x01\x00\x0b\x00\x00\x00\x00\x06\x00|\x00\x06\x00\x00h\x00\x00\x00p\x00\rQ\x00\x00\x00\x00\x00\x00\x00\x00\x04\x00\x01\x00\x00\x00\x00\x01\x00\x01\x00\x00\x00\x00\x00\x00S\x00\x17\x00\x05\x00X\x04\x02\x00\x004\x00\x14\x00\x08\x16\x00\x01\x00\x01\x004A\x00\x14\x00,\x01\x01\x00\x00\x01\x004\x00\x14\x00\x16D\x00\x01\x00\x01\x004\x00 \x14\x00\x16\x00\x01\x00\x01\x04\x004\x00\x14\x00\x16\x00"\x01\x00\x01\x004\x00\x14\x10\x00\x16\x00\x01\x00\x01\x00\x024\x00\x14\x00\x16\x00\x01\x11\x00\x01\x004\x00\x14\x00\x08\x16\x00\x01\x00\x01\x004A\x00\x14\x00\x16\x00\x01\x00\x08\x01\x004\x00\x14\x00\x16D\x00\x01\x00\x01\x00\x12\x00\x00\x01\x00\x06\x00|\x00\x06\x00\x00h\x00\x00\x00p\x00"\r\x00\x00\x00\x00\x00\x00\x01\x00\x16\x00\x01\x00\x00\x00\x02\x00\x00\x01\x00\x00\x00\x00\x00\x00S\x00\x17\x00\x05\x00\x08X\x02\x00\x004\x00\x14\x10\x00\x16\x00\x01\x00\x01\x00\x02 \x01\x14\x00\x00\x00\x01\x00\x00\x01\x004\x00\x14\x00\x08\x16\x00\x01\x00\x01\x004A\x00\x14\x00\x16\x00\x01\x00\x08\x01\x004\x00\x14\x00\x16D\x00\x01\x00\x01\x004\x00 \x14\x00\x16\x00\x01\x00\x01\x04\x004\x00\x14\x00\x16\x00"\x01\x00\x01\x004\x00\x14\x10\x00\x16\x00\x01\x00\x01\x00\x024\x00\x14\x00\x16\x00\x01\x11\x00\x01\x004\x00\x14\x00\x08\x16\x00\x01\x00\x01\x00\r\x01\x00\x00\x00\x06\x00h\x00 \x00\x00?\x01\x00\x00p@\x00\r\x00\x00\x00\x00\x00\x02\x00\x00\x16\x00\x01\x00\x00\x04\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00S\x00\x17\x00\x05\x10\x00X\x02\x00\x004\x00 \x14\x00\x16\x00\x01\x00\x01\x04\x00 \x01\x14\x00\x00\x00\x00\x01\x00\x01\x004\x00\x14\x10\x00\x16\x00\x01\x00\x01\x00\x024\x00\x14\x00\x16\x00\x01\x11\x00\x01\x004\x00\x14\x00\x08\x16\x00\x01\x00\x01\x004A\x00\x14\x00\x16\x00\x01\x00\x08\x01\x004\x00\x14\x00\x16D\x00\x01\x00\x01\x004\x00 \x14\x00\x16\x00\x01\x00\x01\x04\x004\x00\x14\x00\x16\x00"\x01\x00\x01\x004\x00\x14\x10\x00\x16\x00\x01\x00\x01\x00\x02\x14\x00\x01\x00\x06\x00h@\x00\x00\x00?\x01\x00\x00\x00p\x00\r\x00\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00I\x00\x00N\x00P\x00U\x00\x00T\x00 \x00A\x00 \x00\x00\x00\x00LLI\x00\x18N\x00P\x00U\x00T\x00\x00 \x00B\x00 \x00\x00\x00\x00L&I\x00N\x00\x00P\x00U\x00T\x00\x00 \x00C\x00 \x00\x00\x00\x00l\x1cS\x00U\x00\x04M\x00 \x00 \x00 \x00\x00 \x00 \x00\x00\x00\x00^L\'<*-X>PRE\x01\x00\x11\x01\x00\x18\x00\x00\x00\x00\x00\x00\x00\x00A     \x00  \x00\x00A  \x00     \x00\x00\x00\'/-:\'/<\x7f-\x00\x00\x00\x00\x00\x00\x01\\\xf7'
+        self.devices()[
+            0].ping_response = b'\xf0\x00 2\x00\x0e\x04\x10\x04\x05\x05\x04\x04\x02\x02\x04\x02\x00\x00\x00\x00\x0e\x00\x00\xf7'
+        for n, d in self.devices().items():
+            new_ping = bytearray.fromhex("f0002032000e000111444358323439362d3020202020202020f7")
+            new_ping[const.COMMAND_BYTE] = const.SEARCH_RESPONSE
+            new_ping[const.ID_BYTE] = n
+            d.ping_response = new_ping
+            d.is_new = False
+
+    def write(self, data):
+        self.__io_logger.debug(f"serial write: {data}")
+        self.protocol.write(data)
+
+    def ping_all(self):
+        self.__logger.debug("pinging...")
+        for n, d in self.__devices.items():
+            self.ping(n)
+
+    def resync(self):
+        self.__logger.debug("resyncing...")
+        for n, d in self.__devices.items():
+            self.dump(n, 0)
+
+    def search(self):
+        self.__logger.debug("searching...")
+        self.__devices.clear()
+        self.write(b'\xF0\x00\x20\x32\x20\x0E\x40\x7F')
+
+    def ping(self, device_id: int):
+        pingCommand = b'\xF0\x00\x20\x32' + device_id.to_bytes(
+            1) + b'\x0E\x44\x00\x00' + const.TERMINATOR
+        self.write(pingCommand)
+
+    def dump(self, device_id: int, part: int):
+        dumpCommand = b'\xF0\x00\x20\x32' + device_id.to_bytes(
+            1) + b'\x0E\x50\x01\x00' + part.to_bytes(1) + const.TERMINATOR
+        self.write(dumpCommand)
+
+    def dump(self, device_id: int):
+        self.dump(device_id, 0)
+        self.dump(device_id, 1)
+
+    def setTransmitMode(self, device_id: int):
+        self.__logger.debug(f"setting transmit mode for device {device_id}")
+        transmitModeCommand = b'\xF0\x00\x20\x32' + device_id.to_bytes(
+            1) + b'\x0E\x3F\x0C\x00' + const.TERMINATOR
+        self.write(transmitModeCommand)
 
     def run(self):
+        asyncio.set_event_loop(asyncio.new_event_loop())
         self.__loop = asyncio.get_event_loop()
-        self.__coro = serial.aio.create_serial_connection(self.__loop, UltradriveProtocol, '/dev/ttyS0',
+        self.__coro = serial.aio.create_serial_connection(self.__loop, self.protocol, '/dev/ttyS0',
                                                           baudrate=const.BAUD_RATE)
-        self.__loop.run_until_complete(self.__coro)
-        self.__loop.run_forever()  # part of the example in the docs - possibly redundant
-        self.__loop.close()
+        try:
+            self.__loop.run_until_complete(self.__coro)
+            self.__loop.run_forever()
+            self.__loop.close()
+        except serial.serialutil.SerialException as e:
+            self.__logger.warn(f"Serial exception - continuing with demo data \n{e}")
+            self.stop()
+            self.setup_dummy_data()
+
+    def connection_made(self):
+        self.__scheduler.start()
+        self.__scheduler.add_job(self.ping_all, 'interval', seconds=const.PING_INTEVAL)
+        self.__scheduler.add_job(self.resync, 'interval', seconds=const.RESYNC_INTEVAL)
+        self.__scheduler.add_job(self.search, 'interval', seconds=const.SEARCH_INTEVAL)
+        atexit.register(self.stop)
+        self.__loop.call_soon(self.search())
+
+    def handle_packet(self, packet):
+        device_id = packet[const.ID_BYTE]
+        command = packet[const.COMMAND_BYTE]
+
+        if device_id not in self.__devices:
+            self.__logger
+            device = Device(device_id)
+            self.__devices[device_id] = device
+            self.dump(device_id)
+        else:
+            device = self.devices[device_id]
+
+        if command is const.SEARCH_RESPONSE:
+            if len(packet) is const.SEARCH_RESPONSE_LENGTH:
+                device.search_response[:] = packet
+            else:
+                raise RuntimeError("recieved malformed response")
+
+        if command is const.DUMP_RESPONSE:
+            part = packet[const.PART_BYTE]
+            if part is 0:
+                if len(packet) is const.PART_0_LENGTH:
+                    device.dump0[:] = packet
+                else:
+                    raise RuntimeError("recieved malformed response")
+            elif part is 1:
+                if len(packet) is const.PART_1_LENGTH:
+                    device.dump1[:] = packet
+                    device.is_new = False
+                else:
+                    raise RuntimeError("recieved malformed response")
+            else:
+                raise RuntimeError("recieved malformed response")
+        elif command is const.PING_RESPONSE:
+            if len(packet) is const.PING_RESPONSE_LENGTH:
+                device.ping_response[:] = packet
+            else:
+                raise RuntimeError("recieved malformed response")
+        elif command is const.DIRECT_COMMAND:
+            return
+            count = packet[const.PARAM_COUNT_BYTE]
+            for i in range(count):
+                offset = 4 * i
+                channel = packet[const.CHANNEL_BYTE + offset]
+                param = packet[const.PARAM_BYTE + offset]
+                valueHigh = packet[const.VALUE_HI_BYTE + offset]
+                valueLow = packet[const.VALUE_LOW_BYTE + offset]
+                if channel == 0:
+                    self.patchBuffer(device_id, valueLow, valueHigh,
+                                     self.setupLocations[param - (11 if param <= 11 else 10)])
+                elif channel <= 4:
+                    self.patchBuffer(device_id, valueLow, valueHigh, self.inputLocations[channel - 1][param - 2])
+                elif channel <= 10:
+                    self.patchBuffer(device_id, valueLow, valueHigh, self.outputLocations[channel - 5][param - 2])
+        else:
+            raise RuntimeError("recieved malformed response")
 
 
 class UltradriveProtocol(Packetizer):
     TERMINATOR = const.TERMINATOR
 
-    def __init__(self):
+    def __init__(self, logger, ultradrive: Ultadrive):
         super().__init__()
-        self.transport = None
+        self.__logger = logger.getChild("protocol")
+        self.__transport = None
+        self.__ultradrive = ultradrive
 
     def connection_made(self, transport):
-        self.transport = transport
-        app.logger.info('port opened', transport)
+        self.__transport = transport
+        self.__logger.info('port opened', transport)
+        self.__ultradrive.connection_made()
 
     def connection_lost(self, exc):
-        app.logger.info(f"connection on port lost {exec}")
+        self.__logger.info(f"connection on port lost {exec}")
         asyncio.get_event_loop().stop()
 
     def handle_packet(self, packet):
-        pass
+        self.__logger.debug(f"recived package: {packet}")
+        if not packet.startswith(const.VENDOR_HEADER):
+            self.__ultradrive.handle_packet(packet)
 
+    def write(self, data):
+        self.__transport.write(data)
 
 #
 # void Ultradrive::processIncoming(unsigned long now) {
