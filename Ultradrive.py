@@ -117,9 +117,8 @@ class Ultadrive(threading.Thread):
         self.__logger.debug("searching...")
         search_command = b'\xF0\x00\x20\x32\x20\x0E\x40' + bytes([247])
         self.write(search_command)
-        while self.__protocol.transport.serial.in_waiting == 0:
-            self.__logger.debug("nothing returned")
-        self.__logger.debug("something returned")
+        if self.__protocol.transport.serial.in_waiting == 0:
+            self.__io_logger.debug("nothing returned")
 
 
     def ping(self, device_id: int):
