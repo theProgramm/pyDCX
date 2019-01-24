@@ -2,6 +2,7 @@ import asyncio
 import atexit
 import threading
 from dataclasses import dataclass
+from threading import RLock
 from typing import Dict
 
 import serial
@@ -99,10 +100,7 @@ class Ultadrive(threading.Thread):
             d.is_new = False
 
     def write(self, data):
-        self.__io_logger.debug(f"serial write: {data}")
         self.__protocol.write(data)
-        self.__io_logger.debug(f"wrote data to serial: {data}")
-        return self.__protocol.transport.serial.in_waiting == 0
 
     def ping_all(self):
         self.__io_logger.debug(f"pinging all {len(self.__devices)} devices")
@@ -264,6 +262,7 @@ class Echo(serial.threaded.Protocol):
 
 class UltradriveProtocol(Packetizer):
     TERMINATOR = const.TERMINATOR
+    lock: RLock = RLock()
 
     def __init__(self, logger, ultradrive: Ultadrive):
         super(UltradriveProtocol, self).__init__()
@@ -281,7 +280,7 @@ class UltradriveProtocol(Packetizer):
         asyncio.get_event_loop().stop()
 
     def data_received(self, data):
-        self.__logger.info(f"received data: {data}")
+        self.__logger.debug(f"received data: {data}")
         super(UltradriveProtocol, self).data_received(data)
 
     def handle_packet(self, packet):
@@ -293,10 +292,16 @@ class UltradriveProtocol(Packetizer):
 
     def write(self, data):
         self.__logger.debug("waiting for empty in_waiting before write")
-        while self.transport.serial.in_waiting > 0:
-            pass
-        self.__logger.debug(f"finnaly writing {data}")
-        written = self.transport.write(data)
+        with self.lock.acquire():
+            while self.transport.serial.in_waiting > 0:
+                pass
+            self.__logger.debug(f"finnaly writing {data}")
+            self.transport.write(data)
+            blocked = False
+            if self.transport.serial.in_waiting > 0:
+                blocked = True
+            self.__logger.debug(f"wrote {data}")
+            return blocked
 
 #
 # void Ultradrive::processIncoming(unsigned long now) {
