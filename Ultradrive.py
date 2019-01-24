@@ -106,6 +106,7 @@ class Ultadrive(threading.Thread):
         self.__io_logger.debug(f"pinging all {len(self.__devices)} devices")
         for n, d in self.__devices.items():
             self.ping(n)
+        self.__io_logger.debug(f"finished pinging")
 
     def resync(self):
         self.__logger.debug("resyncing...")
