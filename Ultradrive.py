@@ -163,7 +163,7 @@ class Ultadrive(threading.Thread):
         self.__scheduler.add_job(self.ping_all, 'interval', seconds=const.PING_INTEVAL)
         self.__scheduler.add_job(self.resync, 'interval', seconds=const.RESYNC_INTEVAL)
         atexit.register(self.stop)
-        self.__loop.call_soon(self.resync())
+        self.__loop.call_soon(self.resync)
 
     def handle_packet(self, packet):
         self.__packet_logger.debuf(f"handling packet {packet}")
