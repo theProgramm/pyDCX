@@ -46,7 +46,7 @@ class Ultadrive(threading.Thread):
         self.__packet_logger = self.__logger.getChild("packet")
         self.__loop = None
         self.__coro = None
-        self.__protocol = UltradriveProtocol(logger, self)
+        self.__protocol = UltradriveProtocol(self.__logger, self)
         self.__devices = dict()
 
         jobstores = {
