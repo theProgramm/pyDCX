@@ -53,7 +53,7 @@ class Ultadrive(threading.Thread):
             'default': MemoryJobStore()
         }
         executors = {
-            'default': ThreadPoolExecutor(1),
+            'default': ThreadPoolExecutor(2),
         }
         job_defaults = {
             'coalesce': True,
@@ -176,9 +176,9 @@ class Ultadrive(threading.Thread):
         self.__packet_logger.debug(f"handling packet {packet}")
         device_id = packet[const.ID_BYTE]
         command = packet[const.COMMAND_BYTE]
-
+        self.__packet_logger.info(f"handling command {command} for device: {device_id}")
         if device_id not in self.__devices:
-            self.__packet_logger.info(f"received {command} from unknown device_id: {device_id}")
+            self.__packet_logger.info(f"received command: {command} from unknown device_id: {device_id}")
             device = Device(device_id)
             self.__devices[device_id] = device
             self.dump_device(device_id)
