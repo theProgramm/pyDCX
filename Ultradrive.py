@@ -256,8 +256,6 @@ class Echo(serial.threaded.Protocol):
         self.__ultradrive.stop()
 
     def write(self, data):
-        while self.transport.serial.in_waiting > 0:
-            pass
         self.transport.write(data)
 
 
