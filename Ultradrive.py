@@ -42,8 +42,8 @@ class Ultadrive(threading.Thread):
     def __init__(self, logger):
         super(Ultadrive, self).__init__()
         self.__logger = logger.getChild("ultradrive")
-        self.__io_logger = logger.getChild("io")
-        self.__packet_logger = logger.getChild("packet")
+        self.__io_logger = self.__logger.getChild("io")
+        self.__packet_logger = self.__logger.getChild("packet")
         self.__loop = None
         self.__coro = None
         self.__protocol = UltradriveProtocol(logger, self)

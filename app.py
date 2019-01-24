@@ -11,7 +11,7 @@ from const import FRONTEND_PATH
 class Data:
     def __init__(self):
         self.static_files = []
-        logging.getLogger('apscheduler').setLevel(logging.DEBUG)
+        logging.getLogger('apscheduler').setLevel(logging.INFO)
         logging.getLogger('flask').setLevel(logging.DEBUG)
         logging.getLogger('werkzeug').setLevel(logging.ERROR)
         logging.getLogger('flask.app.api.http').setLevel(logging.ERROR)
