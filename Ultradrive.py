@@ -182,7 +182,7 @@ class Ultadrive(threading.Thread):
             self.__packet_logger.info(f"received command: {command} from unknown device_id: {device_id}")
             device = Device(device_id)
             self.__devices[device_id] = device
-            self.dump_device(device_id)
+            self.__loop.call_soon_threadsafe(self.dump_device, device_id)
         else:
             device = self.__devices[device_id]
 
