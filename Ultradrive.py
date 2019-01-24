@@ -218,21 +218,22 @@ class UltradriveProtocol(Packetizer):
     TERMINATOR = const.TERMINATOR
 
     def __init__(self, logger, ultradrive: Ultadrive):
-        super().__init__()
+        super(UltradriveProtocol, self).__init__()
         self.__logger = logger.getChild("protocol")
-        self.__transport = None
         self.__ultradrive = ultradrive
 
     def connection_made(self, transport):
-        self.__transport = transport
+        super(UltradriveProtocol, self).connection_made(transport)
         self.__logger.info('port opened', transport)
         self.__ultradrive.connection_made()
 
     def connection_lost(self, exc):
+        super(UltradriveProtocol, self).connection_lost(exc)
         self.__logger.info(f"connection on port lost {exec}")
         asyncio.get_event_loop().stop()
 
     def data_received(self, data):
+        super(UltradriveProtocol, self).data_received(data)
         self.__logger.debug(f"received data: {data}")
 
     def handle_packet(self, packet):
@@ -241,7 +242,7 @@ class UltradriveProtocol(Packetizer):
             self.__ultradrive.handle_packet(packet)
 
     def write(self, data):
-        self.__transport.write(data)
+        self.transport.write(data)
 
 #
 # void Ultradrive::processIncoming(unsigned long now) {
