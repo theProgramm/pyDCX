@@ -283,7 +283,7 @@ class UltradriveProtocol(Packetizer):
         while self.transport.serial.in_waiting > 0:
             pass
         self.__logger.debug(f"finnaly writing {data}")
-        written = self.transport.write(data)
+        written = self.transport.serial.write(data)
         self.__logger.debug(f"wrote  {written}")
 
 #
