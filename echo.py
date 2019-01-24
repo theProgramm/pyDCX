@@ -34,7 +34,7 @@ class ReaderThread(threading.Thread):
         self.con = serial.aio.create_serial_connection(self.__loop, self.echo, '/dev/ttyS0',
                                                        baudrate=38400)
         self.__loop.run_until_complete(self.con)
-        self.__loop.run_forever()  # part of the example in the docs - possibly redundant
+        self.__loop.run_forever()
         self.__loop.close()
 
     def write(self, data):

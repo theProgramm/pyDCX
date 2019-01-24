@@ -116,7 +116,11 @@ class Ultadrive(threading.Thread):
     def search(self):
         self.__logger.debug("searching...")
         search_command = b'\xF0\x00\x20\x32\x20\x0E\x40' + bytes([247])
-        self.write(b'\xF0\x00\x20\x32\x20\x0E\x40\x7F')
+        self.write(search_command)
+        while self.__protocol.transport.serial.in_waitin == 0:
+            self.__logger.debug("nothing returned")
+        self.__logger.debug("something returned")
+
 
     def ping(self, device_id: int):
         ping_command = b'\xF0\x00\x20\x32' + device_id.to_bytes(
@@ -270,8 +274,8 @@ class UltradriveProtocol(Packetizer):
         asyncio.get_event_loop().stop()
 
     def data_received(self, data):
-        super(UltradriveProtocol, self).data_received(data)
         self.__logger.debug(f"received data: {data}")
+        super(UltradriveProtocol, self).data_received(data)
 
     def handle_packet(self, packet):
         self.__logger.debug(f"recived package: {packet}")
@@ -283,8 +287,7 @@ class UltradriveProtocol(Packetizer):
         while self.transport.serial.in_waiting > 0:
             pass
         self.__logger.debug(f"finnaly writing {data}")
-        written = self.transport.serial.write(data)
-        self.__logger.debug(f"wrote  {written}")
+        written = self.transport.write(data)
 
 #
 # void Ultradrive::processIncoming(unsigned long now) {
