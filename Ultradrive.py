@@ -120,7 +120,6 @@ class Ultadrive(threading.Thread):
         if self.__protocol.transport.serial.in_waiting == 0:
             self.__io_logger.debug("nothing returned")
 
-
     def ping(self, device_id: int):
         ping_command = b'\xF0\x00\x20\x32' + device_id.to_bytes(
             1, "big") + b'\x0E\x44\x00\x00' + const.TERMINATOR
@@ -277,9 +276,11 @@ class UltradriveProtocol(Packetizer):
         super(UltradriveProtocol, self).data_received(data)
 
     def handle_packet(self, packet):
-        self.__logger.debug(f"recived package: {packet}")
+        self.__logger.debug(f"received package: {packet}")
         if not packet.startswith(const.VENDOR_HEADER):
             self.__ultradrive.handle_packet(packet)
+        else:
+            self.__logger.warn(f"package without vendor header received {packet}")
 
     def write(self, data):
         self.__logger.debug("waiting for empty in_waiting before write")
