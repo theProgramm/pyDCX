@@ -1,15 +1,13 @@
 import asyncio
 import atexit
-from datetime import datetime, timedelta
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.jobstores.memory import MemoryJobStore
-from apscheduler.executors.pool import ThreadPoolExecutor
 import threading
 from dataclasses import dataclass
-from functools import partial
 from typing import Dict
 
 import serial
+from apscheduler.executors.pool import ThreadPoolExecutor
+from apscheduler.jobstores.memory import MemoryJobStore
+from apscheduler.schedulers.background import BackgroundScheduler
 from serial import aio
 from serial.threaded import Packetizer
 
@@ -48,7 +46,7 @@ class Ultadrive(threading.Thread):
         self.__packet_logger = logger.getChild("io")
         self.__loop = None
         self.__coro = None
-        self.protocol = UltradriveProtocol(logger, self)
+        self.__protocol = UltradriveProtocol(logger, self)
         self.__devices = dict()
 
         jobstores = {
@@ -64,7 +62,7 @@ class Ultadrive(threading.Thread):
         self.__scheduler = BackgroundScheduler(jobstores=jobstores, executors=executors, job_defaults=job_defaults)
 
     def protocol(self):
-        return self.protocol
+        return self.__protocol
 
     def devices(self) -> Dict[int, Device]:
         return self.__devices
@@ -98,7 +96,7 @@ class Ultadrive(threading.Thread):
 
     def write(self, data):
         self.__io_logger.debug(f"serial write: {data}")
-        self.protocol.write(data)
+        self.__protocol.write(data)
 
     def ping_all(self):
         self.__logger.debug("pinging...")
@@ -138,7 +136,7 @@ class Ultadrive(threading.Thread):
     def run(self):
         asyncio.set_event_loop(asyncio.new_event_loop())
         self.__loop = asyncio.get_event_loop()
-        self.__coro = serial.aio.create_serial_connection(self.__loop, self.protocol, '/dev/ttyS0',
+        self.__coro = serial.aio.create_serial_connection(self.__loop, self.__protocol, '/dev/ttyS0',
                                                           baudrate=const.BAUD_RATE)
         try:
             self.__loop.run_until_complete(self.__coro)
