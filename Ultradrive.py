@@ -21,9 +21,9 @@ class Device:
     search_response: bytearray
     ping_response: bytearray
     device_id: int
-    last_resync: datetime
     last_ping: datetime
     last_pong: datetime = None
+    last_resync: datetime = datetime(1970, 1, 1)
     invalidate_sync: bool = False
     dump_started: bool = False
     is_new: bool = True
