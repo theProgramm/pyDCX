@@ -168,8 +168,8 @@ class Ultadrive(threading.Thread):
     def connection_made(self):
         self.__logger.debug("ultradrive thread recieved connection_made")
         self.__scheduler.start()
-        self.__scheduler.add_job(self.ping_all_async(), 'interval', seconds=const.PING_INTEVAL)
-        self.__scheduler.add_job(self.resync_async(), 'interval', seconds=const.RESYNC_INTEVAL)
+        self.__scheduler.add_job(self.ping_all_async, 'interval', seconds=const.PING_INTEVAL)
+        self.__scheduler.add_job(self.resync_async, 'interval', seconds=const.RESYNC_INTEVAL)
         atexit.register(self.stop)
         self.__loop.call_soon(self.resync)
 
