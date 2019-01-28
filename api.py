@@ -17,7 +17,6 @@ class Api:
         self.api.add_url_rule("/devices/<int:n>", view_func=self.device)
 
     def devices(self):
-        self.__logger.info("handling devices")
         ret = bytearray()
         for n, d in self.__ultradrive.devices().items():
             if not d.is_new and d.last_pong is not None:
@@ -26,7 +25,6 @@ class Api:
         return flask.make_response(ret)
 
     def device(self, n: int):
-        self.__logger.info(f"handling device {n}")
         try:
             s = self.__ultradrive.device(n).to_gui()
         except KeyError as e:

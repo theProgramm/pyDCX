@@ -3,7 +3,7 @@ Format is 38400 Bd, 8 databits, no parity, 1 stopbit. RTS gating on RS485.
 
 Sysex command header:
 
-hex(F0 00 20 32 [deviceId] 0E [function] [data] F7)
+hex(F0 00 20 32 [deviceId] 0E [command] [data] F7)
 
 taken from midi sysex: F0 to F7 are the message bounds, the first 0 byte indicates its not a real time message, the 0x20 is a hardcoded MMC device id, the 0x32 is in place of the sub-id#1 denoting the used midi command with a value not specified by mid sysex. The device Id is in place of the sub-id#2. The midis parameter here is allways started with 0x0E and followed by a function byte and the data of that function.
 
