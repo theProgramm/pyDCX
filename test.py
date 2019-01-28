@@ -85,7 +85,7 @@ class Ultadrive(threading.Thread):
             self.__scheduler.shutdown(wait=False)
 
     def write(self, data):
-        self.__loop.call_soon_threadsave(self.__protocol.write, data)
+        self.__loop.call_soon_threadsafe(self.__protocol.write, data)
 
     def ping_all(self):
         self.__io_logger.debug(f"pinging ")
