@@ -20,7 +20,7 @@ class Api:
         ret = bytearray()
         for n, d in self.__ultradrive.devices().items():
             if not d.is_new and d.last_pong is not None:
-                ret.extend(d.ping_response)
+                ret.extend(d.search_response)
         self.__http_logger.debug(f"devies -> {ret}")
         return flask.make_response(ret)
 
