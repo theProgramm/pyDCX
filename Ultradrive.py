@@ -100,13 +100,19 @@ class Ultadrive(threading.Thread):
             d.is_new = False
 
     def write(self, data):
-        self.__loop.call_soon_threadsafe(self.__protocol.write, data)
+        self.__protocol.write(data)
+
+    def ping_all_async(self):
+        self.__loop.call_soon_threadsafe(self.ping_all())
 
     def ping_all(self):
         self.__io_logger.debug(f"pinging all {len(self.__devices)} devices")
         for n, d in self.__devices.items():
             self.ping(n)
         self.__io_logger.debug(f"finished pinging")
+
+    def resync_async(self):
+        self.__loop.call_soon_threadsafe(self.resync())
 
     def resync(self):
         self.__logger.debug("resyncing...")
@@ -162,8 +168,8 @@ class Ultadrive(threading.Thread):
     def connection_made(self):
         self.__logger.debug("ultradrive thread recieved connection_made")
         self.__scheduler.start()
-        self.__scheduler.add_job(self.ping_all, 'interval', seconds=const.PING_INTEVAL)
-        self.__scheduler.add_job(self.resync, 'interval', seconds=const.RESYNC_INTEVAL)
+        self.__scheduler.add_job(self.ping_all_async(), 'interval', seconds=const.PING_INTEVAL)
+        self.__scheduler.add_job(self.resync_async(), 'interval', seconds=const.RESYNC_INTEVAL)
         atexit.register(self.stop)
         self.__loop.call_soon(self.resync)
 
@@ -292,16 +298,16 @@ class UltradriveProtocol(Packetizer):
 
     def write(self, data):
         self.__logger.debug("waiting for empty in_waiting before write")
-        with self.lock:
-            while self.transport.serial.in_waiting > 0:
-                pass
-            self.__logger.debug(f"finnaly writing {data}")
-            self.transport.write(data)
-            blocked = False
-            if self.transport.serial.in_waiting > 0:
-                blocked = True
-            self.__logger.debug(f"wrote {data}")
-            return blocked
+        # with self.lock:
+        while self.transport.serial.in_waiting > 0:
+            pass
+        self.__logger.debug(f"finnaly writing {data}")
+        self.transport.write(data)
+        blocked = False
+        if self.transport.serial.in_waiting > 0:
+            blocked = True
+        self.__logger.debug(f"wrote {data}")
+        return blocked
 
 #
 # void Ultradrive::processIncoming(unsigned long now) {
