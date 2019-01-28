@@ -100,7 +100,7 @@ class Ultadrive(threading.Thread):
             d.is_new = False
 
     def write(self, data):
-        self.__protocol.write(data)
+        self.__loop.call_soon_threadsafe(self.__protocol.write, data)
 
     def ping_all(self):
         self.__io_logger.debug(f"pinging all {len(self.__devices)} devices")
