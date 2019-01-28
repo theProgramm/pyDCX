@@ -1,18 +1,17 @@
-import asyncio
 import atexit
 import threading
 from dataclasses import dataclass
-from threading import RLock
+from datetime import datetime, timedelta
 from typing import Dict
 
 import serial
-from apscheduler.executors.pool import ThreadPoolExecutor
-from apscheduler.jobstores.memory import MemoryJobStore
-from apscheduler.schedulers.background import BackgroundScheduler
-from serial import aio
-from serial.threaded import Packetizer
 
 import const
+
+PING_INTERVAL = timedelta(milliseconds=const.PING_INTEVAL)
+RESYNC_INTERVAL = timedelta(milliseconds=const.RESYNC_INTEVAL)
+SEARCH_INTERVAL = timedelta(milliseconds=const.SEARCH_INTERVAL)
+TIMEOUT = timedelta(milliseconds=const.TIMEOUT_TIME)
 
 
 @dataclass
@@ -22,6 +21,11 @@ class Device:
     search_response: bytearray
     ping_response: bytearray
     device_id: int
+    last_resync: datetime
+    last_ping: datetime
+    last_pong: datetime = None
+    invalidate_sync: bool = False
+    dump_started: bool = False
     is_new: bool = True
 
     def __init__(self, device_id: int):
@@ -45,27 +49,17 @@ class Ultadrive(threading.Thread):
         self.__logger = logger.getChild("ultradrive")
         self.__io_logger = self.__logger.getChild("io")
         self.__packet_logger = self.__logger.getChild("packet")
-        self.__loop = None
-        self.__coro = None
-        self.__protocol = UltradriveProtocol(self.__logger, self)
-        self.__devices = dict()
-
-        jobstores = {
-            'default': MemoryJobStore()
-        }
-        executors = {
-            'default': ThreadPoolExecutor(2),
-        }
-        job_defaults = {
-            'coalesce': True,
-            'max_instances': 1
-        }
-        self.__scheduler = BackgroundScheduler(jobstores=jobstores, executors=executors, job_defaults=job_defaults)
+        self.__devices: Dict[int, Device] = dict()
+        for i in range(const.MAX_DEVICES):
+            self.__devices[i] = Device(i)
+        self.__first_run: bool = True
+        self.__running: bool = True
+        self.__last_search: datetime = datetime(1970, 1, 1)
+        self.__serial: serial.Serial = serial.Serial(port=None, baudrate=const.BAUD_RATE)
+        self.__read_buffer: bytearray = bytearray(const.PART_0_LENGTH)
+        self.__reading_command = False
+        self.__serial_read = 0
         self.__logger.debug(f"created new Ultradrive thread {self}")
-
-    def protocol(self):
-        self.__logger.debug(f"requesting protocol {self.__protocol}")
-        return self.__protocol
 
     def devices(self) -> Dict[int, Device]:
         return self.__devices
@@ -75,12 +69,10 @@ class Ultadrive(threading.Thread):
 
     def stop(self):
         self.__logger.debug(f"stoppgin ultradrive thread {self}")
-        if self.__loop is not None:
-            self.__loop.stop()
-            self.__coro = None
-            self.__loop = None
-        if self.__scheduler is not None and self.__scheduler.running:
-            self.__scheduler.shutdown(wait=False)
+        if not self.__running:
+            raise RuntimeError("thread was not running when trying to stop it")
+        else:
+            self.__serial.close()
 
     # noinspection PyPep8
     def setup_dummy_data(self):
@@ -100,24 +92,7 @@ class Ultadrive(threading.Thread):
             d.is_new = False
 
     def write(self, data):
-        self.__protocol.write(data)
-
-    def ping_all_async(self):
-        self.__loop.call_soon_threadsafe(self.ping_all)
-
-    def ping_all(self):
-        self.__io_logger.debug(f"pinging all {len(self.__devices)} devices")
-        for n, d in self.__devices.items():
-            self.ping(n)
-        self.__io_logger.debug(f"finished pinging")
-
-    def resync_async(self):
-        self.__loop.call_soon_threadsafe(self.resync)
-
-    def resync(self):
-        self.__logger.debug("resyncing...")
-        self.__devices.clear()
-        self.search()
+        self.__serial.write(data)
 
     def search(self):
         self.__logger.debug("searching...")
@@ -135,42 +110,59 @@ class Ultadrive(threading.Thread):
             1, "big") + b'\x0E\x50\x01\x00' + part.to_bytes(1, "big") + const.TERMINATOR
         self.write(dump_command)
 
-    def dump_device(self, device_id: int):
-        self.__io_logger.debug(f"requesting dump for: {device_id}")
-        self.dump(device_id, 0)
-        self.dump(device_id, 1)
-        self.__io_logger.debug(f"finished dump for {device_id}")
-
     def set_transmit_mode(self, device_id: int):
         self.__logger.debug(f"setting transmit mode for device {device_id}")
         transmit_mode_command = b'\xF0\x00\x20\x32' + device_id.to_bytes(
             1, "big") + b'\x0E\x3F\x0C\x00' + const.TERMINATOR
         self.write(transmit_mode_command)
 
+    def looping(self):
+        now = datetime.now()
+        while self.__serial.in_waiting > 0:
+            self.read_commands()
+
+        if self.__first_run:
+            self.__first_run = False
+            self.__last_search = now
+            return self.search()
+
+        if now - self.__last_search >= SEARCH_INTERVAL:
+            self.__last_search = now
+            return self.search()
+        for i in range(const.MAX_DEVICES):
+            device = self.__devices[i]
+            if device.is_new:
+                device.is_new = False
+                device.last_ping = now
+                self.set_transmit_mode(i)
+                return self.ping(i)
+            elif device.last_pong is not None and now - device.last_pong < TIMEOUT:
+                if device.dump_started:
+                    device.dump_started = False
+                    return self.dump(i, 1)
+                elif now - device.last_ping >= PING_INTERVAL:
+                    device.last_ping = now
+                    return self.ping(i)
+                elif now - device.last_resync >= RESYNC_INTERVAL:
+                    device.invalidate_sync = False
+                    device.last_resync = now
+                    return self.dump(i, 0)
+            elif device.last_pong is not None:
+                device.last_pong = None
+
     def run(self):
         self.__logger.info(f"starting new ultradrive thread")
-        asyncio.set_event_loop(asyncio.new_event_loop())
-        self.__loop = asyncio.get_event_loop()
-        self.__coro = serial.aio.create_serial_connection(self.__loop, self.protocol, '/dev/ttyS0',
-                                                          baudrate=const.BAUD_RATE)
         try:
             self.__logger.debug("try connecting...")
-            self.__loop.run_until_complete(self.__coro)
-            self.__logger.debug("connecting not failed")
-            self.__loop.run_forever()
-            self.stop()
+            self.__serial.port = const.PORT
+            self.__serial.open()
+            atexit.register(self.stop)
+            self.__logger.debug("connecting not failed - looping")
+            while self.__running:
+                self.looping()
         except serial.serialutil.SerialException as e:
             self.__logger.warn(f"Serial exception - continuing with demo data \n{e}")
-            self.stop()
             self.setup_dummy_data()
-        self.__logger.info(f"stopped ultradrive thread")
-
-    def connection_made(self):
-        self.__logger.debug("ultradrive thread recieved connection_made")
-        self.__scheduler.start()
-        self.__scheduler.add_job(self.ping_all_async, 'interval', seconds=const.PING_INTEVAL)
-        self.__scheduler.add_job(self.resync_async, 'interval', seconds=const.RESYNC_INTEVAL)
-        atexit.register(self.stop)
 
     def exception_text(self, infix, actual: int, expected: int, packet):
         text = "received malformed response - " + infix + f" has wrong length {actual} instead of {expected - 1}"
@@ -178,136 +170,90 @@ class Ultadrive(threading.Thread):
             text = text + str(packet)
         return text
 
-    def handle_packet(self, packet):
-        self.__packet_logger.debug(f"handling packet {packet}")
-        device_id = packet[const.ID_BYTE]
-        command = packet[const.COMMAND_BYTE]
-        self.__packet_logger.info(f"handling command {command} for device: {device_id}")
-        if device_id not in self.__devices:
-            self.__packet_logger.info(f"received command: {command} from unknown device_id: {device_id}")
-            device = Device(device_id)
-            self.__devices[device_id] = device
-            self.__loop.call_soon_threadsafe(self.dump_device, device_id)
-        else:
-            device = self.__devices[device_id]
+    def read_commands(self):
 
-        if command is const.SEARCH_RESPONSE:
-            if len(packet) is const.SEARCH_RESPONSE_LENGTH - 1:
-                device.search_response[:] = packet
-            else:
-                raise RuntimeError(
-                    self.exception_text("search response", len(packet), const.SEARCH_RESPONSE_LENGTH, packet))
-        elif command is const.DUMP_RESPONSE:
-            part = packet[const.PART_BYTE]
-            if part is 0:
-                if len(packet) is const.PART_0_LENGTH - 1:
-                    device.dump0[:] = packet
+        b = self.__serial.read()
+        if b == const.COMMAND_START:
+            self.__reading_command = True
+            self.__serial_read = 0
+        if self.__reading_command and (self.__serial_read < const.PART_0_LENGTH):
+            self.__read_buffer[self.__serial_read] = b
+            self.__serial_read += 1
+
+        if b == const.TERMINATOR:
+            self.__reading_command = False
+            packet = self.__read_buffer[0:self.__serial_read]
+            if packet.startswith(const.VENDOR_HEADER):
+                self.__packet_logger.debug(f"handling packet {packet}")
+                device_id = packet[const.ID_BYTE]
+                command = packet[const.COMMAND_BYTE]
+                self.__packet_logger.info(f"handling command {command} for device: {device_id}")
+                if device_id not in self.__devices:
+                    self.__packet_logger.info(f"received command: {command} from unknown device_id: {device_id}")
+                    device = Device(device_id)
+                    self.__devices[device_id] = device
                 else:
-                    raise RuntimeError(
-                        self.exception_text("dump response #0", len(packet), const.PART_0_LENGTH, packet))
-            elif part is 1:
-                if len(packet) is const.PART_1_LENGTH - 1:
-                    device.dump1[:] = packet
-                    device.is_new = False
+                    device = self.__devices[device_id]
+                if command is const.SEARCH_RESPONSE:
+                    if len(packet) is const.SEARCH_RESPONSE_LENGTH:
+                        device.search_response[:] = packet
+                        if self.__devices[device_id].last_pong is not None:
+                            device.is_new = True
+                    else:
+                        raise RuntimeError(
+                            self.exception_text("search response", len(packet), const.SEARCH_RESPONSE_LENGTH, packet))
+
+                elif command is const.DUMP_RESPONSE:
+                    if device.invalidate_sync:
+                        self.__serial_read = 0
+                        self.__reading_command = False
+                        return
+
+                    part: int = packet[const.PART_BYTE]
+                    if part is 0:
+                        if len(packet) is const.PART_0_LENGTH:
+                            device.dump0[:] = packet
+                            device.dump_started = True
+                        else:
+                            raise RuntimeError(
+                                self.exception_text("dump response #0", len(packet), const.PART_0_LENGTH, packet))
+                    elif part is 1:
+                        if len(packet) is const.PART_1_LENGTH:
+                            device.dump1[:] = packet
+                        else:
+                            raise RuntimeError(
+                                self.exception_text("dump response #1", len(packet), const.PART_1_LENGTH, packet))
+                    else:
+                        raise RuntimeError(f"received malformed response - dump part is not 0 or 1 but {part}")
+                elif command is const.PING_RESPONSE:
+                    if len(packet) is const.PING_RESPONSE_LENGTH:
+                        device.ping_response[:] = packet
+                        device.last_pong = datetime.now()
+                    else:
+                        raise RuntimeError(
+                            self.exception_text("ping response", len(packet), const.PING_RESPONSE_LENGTH, packet))
+                elif command is const.DIRECT_COMMAND:
+                    return
+                    count = packet[const.PARAM_COUNT_BYTE]
+                    for i in range(count):
+                        offset = 4 * i
+                        channel = packet[const.CHANNEL_BYTE + offset]
+                        param = packet[const.PARAM_BYTE + offset]
+                        value_high = packet[const.VALUE_HI_BYTE + offset]
+                        value_low = packet[const.VALUE_LOW_BYTE + offset]
+                        if channel == 0:
+                            self.patchBuffer(device_id, value_low, value_high,
+                                             self.setupLocations[param - (11 if param <= 11 else 10)])
+                        elif channel <= 4:
+                            self.patchBuffer(device_id, value_low, value_high,
+                                             self.inputLocations[channel - 1][param - 2])
+                        elif channel <= 10:
+                            self.patchBuffer(device_id, value_low, value_high,
+                                             self.outputLocations[channel - 5][param - 2])
                 else:
-                    raise RuntimeError(
-                        self.exception_text("dump response #1", len(packet), const.PART_1_LENGTH, packet))
+                    raise RuntimeError(f"received malformed response - unrecognized command {command}")
             else:
-                raise RuntimeError(f"received malformed response - dump part is not 0 or 1 but {part}")
-        elif command is const.PING_RESPONSE:
-            if len(packet) is const.PING_RESPONSE_LENGTH - 1:
-                device.ping_response[:] = packet
-            else:
-                raise RuntimeError(
-                    self.exception_text("ping response", len(packet), const.PING_RESPONSE_LENGTH, packet))
-        elif command is const.DIRECT_COMMAND:
-            return
-            count = packet[const.PARAM_COUNT_BYTE]
-            for i in range(count):
-                offset = 4 * i
-                channel = packet[const.CHANNEL_BYTE + offset]
-                param = packet[const.PARAM_BYTE + offset]
-                value_high = packet[const.VALUE_HI_BYTE + offset]
-                value_low = packet[const.VALUE_LOW_BYTE + offset]
-                if channel == 0:
-                    self.patchBuffer(device_id, value_low, value_high,
-                                     self.setupLocations[param - (11 if param <= 11 else 10)])
-                elif channel <= 4:
-                    self.patchBuffer(device_id, value_low, value_high, self.inputLocations[channel - 1][param - 2])
-                elif channel <= 10:
-                    self.patchBuffer(device_id, value_low, value_high, self.outputLocations[channel - 5][param - 2])
-        else:
-            raise RuntimeError(f"received malformed response - unrecognized command {command}")
-
-
-class Echo(serial.threaded.Protocol):
-    transport = None
-
-    def __init__(self, logger, ultradrive: Ultadrive):
-        super(Echo, self).__init__()
-        self.__logger = logger.getChild("echo_protocol")
-        self.__ultradrive = ultradrive
-
-    def connection_made(self, transport):
-        self.transport = transport
-        self.__logger.info(f'port opened with transport: {transport}')
-        self.__ultradrive.connection_made()
-
-    def data_received(self, data):
-        self.__logger.debug(f"received data: {data}")
-
-    def connection_lost(self, exc):
-        print(f"lost connection: {exc}")
-        self.__logger.info(f"connection on port lost {exec}")
-        self.__ultradrive.stop()
-
-    def write(self, data):
-        self.transport.write(data)
-
-
-class UltradriveProtocol(Packetizer):
-    TERMINATOR = const.TERMINATOR
-    lock: RLock = RLock()
-
-    def __init__(self, logger, ultradrive: Ultadrive):
-        super(UltradriveProtocol, self).__init__()
-        self.__logger = logger.getChild("protocol")
-        self.__ultradrive = ultradrive
-
-    def connection_made(self, transport):
-        super(UltradriveProtocol, self).connection_made(transport)
-        self.__logger.info(f'port opened with transport: {transport}')
-        self.__ultradrive.connection_made()
-
-    def connection_lost(self, exc):
-        super(UltradriveProtocol, self).connection_lost(exc)
-        self.__logger.info(f"connection on port lost {exec}")
-        asyncio.get_event_loop().stop()
-
-    def data_received(self, data):
-        self.__logger.debug(f"received data: {data}")
-        super(UltradriveProtocol, self).data_received(data)
-
-    def handle_packet(self, packet):
-        self.__logger.debug(f"received package: {packet}")
-        if packet.startswith(const.VENDOR_HEADER):
-            self.__ultradrive.handle_packet(packet)
-        else:
-            self.__logger.warn(f"package without vendor header received {packet}")
-
-    def write(self, data):
-        self.__logger.debug("waiting for empty in_waiting before write")
-        # with self.lock:
-        while self.transport.serial.in_waiting > 0:
-            pass
-        self.__logger.debug(f"finnaly writing {data}")
-        self.transport.write(data)
-        blocked = False
-        if self.transport.serial.in_waiting > 0:
-            blocked = True
-        self.__logger.debug(f"wrote {data}")
-        return blocked
-
+                raise RuntimeError(f"received malfromed response - no vendor header given")
 #
 # void Ultradrive::processIncoming(unsigned long now) {
 #   while (serial->available() > 0) {
