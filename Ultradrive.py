@@ -103,7 +103,7 @@ class Ultadrive(threading.Thread):
         self.__protocol.write(data)
 
     def ping_all_async(self):
-        self.__loop.call_soon_threadsafe(self.ping_all())
+        self.__loop.call_soon_threadsafe(self.ping_all)
 
     def ping_all(self):
         self.__io_logger.debug(f"pinging all {len(self.__devices)} devices")
@@ -112,7 +112,7 @@ class Ultadrive(threading.Thread):
         self.__io_logger.debug(f"finished pinging")
 
     def resync_async(self):
-        self.__loop.call_soon_threadsafe(self.resync())
+        self.__loop.call_soon_threadsafe(self.resync)
 
     def resync(self):
         self.__logger.debug("resyncing...")
@@ -171,7 +171,6 @@ class Ultadrive(threading.Thread):
         self.__scheduler.add_job(self.ping_all_async, 'interval', seconds=const.PING_INTEVAL)
         self.__scheduler.add_job(self.resync_async, 'interval', seconds=const.RESYNC_INTEVAL)
         atexit.register(self.stop)
-        self.__loop.call_soon(self.resync)
 
     def exception_text(self, infix, actual: int, expected: int, packet):
         text = "received malformed response - " + infix + f" has wrong length {actual} instead of {expected - 1}"
