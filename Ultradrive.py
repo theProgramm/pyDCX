@@ -95,23 +95,25 @@ class Ultadrive(threading.Thread):
         self.__serial.write(data)
 
     def search(self):
-        self.__logger.debug("searching...")
+        self.__io_logger.debug("searching...")
         search_command = b'\xF0\x00\x20\x32\x20\x0E\x40' + bytes([247])
         self.write(search_command)
         self.__io_logger.debug("searching done")
 
     def ping(self, device_id: int):
+        self.__io_logger.debug(f"pinging {device_id}")
         ping_command = b'\xF0\x00\x20\x32' + device_id.to_bytes(
             1, "big") + b'\x0E\x44\x00\x00' + const.TERMINATOR
         self.write(ping_command)
 
     def dump(self, device_id: int, part: int):
+        self.__io_logger.debug(f"dumping {device_id} {part}")
         dump_command = b'\xF0\x00\x20\x32' + device_id.to_bytes(
             1, "big") + b'\x0E\x50\x01\x00' + part.to_bytes(1, "big") + const.TERMINATOR
         self.write(dump_command)
 
     def set_transmit_mode(self, device_id: int):
-        self.__logger.debug(f"setting transmit mode for device {device_id}")
+        self.__io_logger.debug(f"setting transmit mode for device {device_id}")
         transmit_mode_command = b'\xF0\x00\x20\x32' + device_id.to_bytes(
             1, "big") + b'\x0E\x3F\x0C\x00' + const.TERMINATOR
         self.write(transmit_mode_command)
@@ -171,10 +173,11 @@ class Ultadrive(threading.Thread):
         return text
 
     def read_commands(self):
-
+        self.__packet_logger.debug("reading_command")
         b: bytes = self.__serial.read(1)
 
         if b == const.COMMAND_START:
+            self.__packet_logger.debug("new command started")
             self.__reading_command = True
             self.__serial_read = 0
         if self.__reading_command and (self.__serial_read < const.PART_0_LENGTH):
@@ -182,6 +185,7 @@ class Ultadrive(threading.Thread):
             self.__serial_read += 1
 
         if b == const.TERMINATOR:
+            self.__packet_logger.debug("decoding received command started")
             self.__reading_command = False
             packet = self.__read_buffer[0:self.__serial_read]
             if packet.startswith(const.VENDOR_HEADER):
