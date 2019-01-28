@@ -165,7 +165,7 @@ class Ultadrive(threading.Thread):
             self.setup_dummy_data()
 
     def exception_text(self, infix, actual: int, expected: int, packet):
-        text = "received malformed response - " + infix + f" has wrong length {actual} instead of {expected - 1}"
+        text = "received malformed response - " + infix + f" has wrong length {actual} instead of {expected}"
         if self.__packet_logger.level > 10:  # 10 == DEBUG
             text = text + str(packet)
         return text
@@ -195,8 +195,8 @@ class Ultadrive(threading.Thread):
                     self.__devices[device_id] = device
                 else:
                     device = self.__devices[device_id]
-                if command is const.SEARCH_RESPONSE:
-                    if len(packet) is const.SEARCH_RESPONSE_LENGTH:
+                if command == const.SEARCH_RESPONSE:
+                    if len(packet) == const.SEARCH_RESPONSE_LENGTH:
                         device.search_response[:] = packet
                         if self.__devices[device_id].last_pong is not None:
                             device.is_new = True
@@ -204,36 +204,36 @@ class Ultadrive(threading.Thread):
                         raise RuntimeError(
                             self.exception_text("search response", len(packet), const.SEARCH_RESPONSE_LENGTH, packet))
 
-                elif command is const.DUMP_RESPONSE:
+                elif command == const.DUMP_RESPONSE:
                     if device.invalidate_sync:
                         self.__serial_read = 0
                         self.__reading_command = False
                         return
 
                     part: int = packet[const.PART_BYTE]
-                    if part is 0:
-                        if len(packet) is const.PART_0_LENGTH:
+                    if part == 0:
+                        if len(packet) == const.PART_0_LENGTH:
                             device.dump0[:] = packet
                             device.dump_started = True
                         else:
                             raise RuntimeError(
                                 self.exception_text("dump response #0", len(packet), const.PART_0_LENGTH, packet))
-                    elif part is 1:
-                        if len(packet) is const.PART_1_LENGTH:
+                    elif part == 1:
+                        if len(packet) == const.PART_1_LENGTH:
                             device.dump1[:] = packet
                         else:
                             raise RuntimeError(
                                 self.exception_text("dump response #1", len(packet), const.PART_1_LENGTH, packet))
                     else:
                         raise RuntimeError(f"received malformed response - dump part is not 0 or 1 but {part}")
-                elif command is const.PING_RESPONSE:
-                    if len(packet) is const.PING_RESPONSE_LENGTH:
+                elif command == const.PING_RESPONSE:
+                    if len(packet) == const.PING_RESPONSE_LENGTH:
                         device.ping_response[:] = packet
                         device.last_pong = datetime.now()
                     else:
                         raise RuntimeError(
                             self.exception_text("ping response", len(packet), const.PING_RESPONSE_LENGTH, packet))
-                elif command is const.DIRECT_COMMAND:
+                elif command == const.DIRECT_COMMAND:
                     return
                     count = packet[const.PARAM_COUNT_BYTE]
                     for i in range(count):
