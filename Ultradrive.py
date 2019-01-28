@@ -58,7 +58,7 @@ class Ultadrive(threading.Thread):
         self.__serial: serial.Serial = serial.Serial(port=None, baudrate=const.BAUD_RATE)
         self.__read_buffer: bytearray = bytearray(const.PART_0_LENGTH)
         self.__reading_command = False
-        self.__serial_read = 0
+        self.__serial_read: int = 0
         self.__logger.debug(f"created new Ultradrive thread {self}")
 
     def devices(self) -> Dict[int, Device]:
@@ -172,12 +172,13 @@ class Ultadrive(threading.Thread):
 
     def read_commands(self):
 
-        b = self.__serial.read()
+        b: bytes = self.__serial.read(1)
+
         if b == const.COMMAND_START:
             self.__reading_command = True
             self.__serial_read = 0
         if self.__reading_command and (self.__serial_read < const.PART_0_LENGTH):
-            self.__read_buffer[self.__serial_read] = b
+            self.__read_buffer[self.__serial_read] = b[0]
             self.__serial_read += 1
 
         if b == const.TERMINATOR:
