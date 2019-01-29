@@ -59,7 +59,7 @@ class Device:
         self.ping_response = new_ping_response
         self.last_pong = now
 
-    def register(self, ultradrive, now: datetime):
+    async def register(self, ultradrive, now: datetime):
         self.is_new = False
         self.last_ping = now
         self.set_transmit_mode(ultradrive)
@@ -88,7 +88,7 @@ class Device:
             1, "big") + b'\x0E\x3F\x0C\x00' + const.TERMINATOR
         ultradrive.write(transmit_mode_command)
 
-    def update_from_command(self, packet):
+    async def update_from_command(self, packet):
         async with self.lock:
             async with self.dump_counter:
                 async with self.dump_counter:
@@ -100,16 +100,16 @@ class Device:
                         value_high = packet[const.VALUE_HI_BYTE + offset]
                         value_low = packet[const.VALUE_LOW_BYTE + offset]
                         if channel == 0:
-                            self.patch_buffer(value_low, value_high,
-                                              buffer.SETUP_LOCATIONS[param - (11 if param <= 11 else 10)])
+                            await self.patch_buffer(value_low, value_high,
+                                                    buffer.SETUP_LOCATIONS[param - (11 if param <= 11 else 10)])
                         elif channel <= 4:
-                            self.patch_buffer(value_low, value_high,
-                                              buffer.INPUT_LOCATIONS[channel - 1][param - 2])
+                            await self.patch_buffer(value_low, value_high,
+                                                    buffer.INPUT_LOCATIONS[channel - 1][param - 2])
                         elif channel <= 10:
-                            self.patch_buffer(value_low, value_high,
-                                              buffer.OUTPUT_LOCATIONS[channel - 5][param - 2])
+                            await self.patch_buffer(value_low, value_high,
+                                                    buffer.OUTPUT_LOCATIONS[channel - 5][param - 2])
 
-    def patch_buffer(self, low_param: int, high_param: int, l):
+    async def patch_buffer(self, low_param: int, high_param: int, l):
         low = 0
         middle = 1
         high = 2
@@ -140,7 +140,7 @@ class Device:
             elif l[high][part] == 1:
                 self.dump1[l[high][byte]] = high_byte
 
-    def update_from_outgoing_command(self, out_string):
+    async def update_from_outgoing_command(self, out_string):
         async with self.lock:
             async with self.dump_counter:
                 async with self.dump_counter:
@@ -155,16 +155,16 @@ class Device:
                         value_high: int = out_string[const.VALUE_HI_BYTE + offset]
                         value_low: int = out_string[const.VALUE_LOW_BYTE + offset]
                         if channel == 0:
-                            self.patch_buffer(value_low, value_high,
-                                              buffer.SETUP_LOCATIONS[param - (2 if param <= 11 else 10)])
+                            await self.patch_buffer(value_low, value_high,
+                                                    buffer.SETUP_LOCATIONS[param - (2 if param <= 11 else 10)])
                         elif channel <= 4:
-                            self.patch_buffer(value_low, value_high,
-                                              buffer.INPUT_LOCATIONS[channel - 1][param - 2])
+                            await self.patch_buffer(value_low, value_high,
+                                                    buffer.INPUT_LOCATIONS[channel - 1][param - 2])
                         elif channel <= 10:
-                            self.patch_buffer(value_low, value_high,
-                                              buffer.OUTPUT_LOCATIONS[channel - 5][param - 2])
+                            await self.patch_buffer(value_low, value_high,
+                                                    buffer.OUTPUT_LOCATIONS[channel - 5][param - 2])
 
-    def to_gui(self) -> bytearray:
+    async def to_gui(self) -> bytearray:
         async with self.lock:
             async with self.dump_counter:
                 async with self.dump_counter:
@@ -333,7 +333,7 @@ class Ultadrive(Thread):
                         raise RuntimeError(
                             self.exception_text("ping response", len(packet), const.PING_RESPONSE_LENGTH, packet))
                 elif command == const.DIRECT_COMMAND:
-                    device.update_from_command(packet)
+                    await device.update_from_command(packet)
                 else:
                     raise RuntimeError(f"received malformed response - unrecognized command {command}")
             else:
@@ -353,7 +353,7 @@ class Ultadrive(Thread):
             raise RuntimeError(f"command did not start with {const.VENDOR_HEADER}")
 
         device_id: int = out_string[const.ID_BYTE]
-        self.__devices[device_id].update_from_outgoing_command(out_string)
+        await self.__devices[device_id].update_from_outgoing_command(out_string)
         self.write(out_string)
         return device_id
 
