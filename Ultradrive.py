@@ -277,7 +277,7 @@ class Ultadrive(Thread):
         for i in range(const.MAX_DEVICES):
             device = self.__devices[i]
             if device.is_new:
-                self.__logger.debug(f"found new device with id {i}")
+                self.__logger.debug(f"registering new device {i}")
                 device.register(self, now)
             elif device.is_active(now):
                 if not device.is_up_to_date(now):
