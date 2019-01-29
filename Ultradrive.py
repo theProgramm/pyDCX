@@ -249,14 +249,15 @@ class Ultadrive(Thread):
             while self.__running:
                 try:
                     self.looping()
+                    sleep(0.0001)
                 except RuntimeError as e:
                     self.__logger.warn(e)
-                sleep(0.0001)
         except serial.serialutil.SerialException as e:
             self.__logger.warn(f"Serial exception - continuing with demo data \n{e}")
             self.setup_dummy_data()
 
     def looping(self):
+        self.__logger.debug("looping")
         now = datetime.now()
         while self.__serial.in_waiting > 0:
             self.read_commands(now)
@@ -280,7 +281,7 @@ class Ultadrive(Thread):
 
     def read_commands(self, now: datetime):
         b: bytes = self.__serial.read(1)
-
+        self.io_logger.debug(f"read new byte {b}")
         if b == const.COMMAND_START:
             self.packet_logger.debug("new command started")
             self.__reading_command = True
