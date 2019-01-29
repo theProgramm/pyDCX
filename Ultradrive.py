@@ -260,7 +260,6 @@ class Ultadrive(Thread):
     def looping(self):
         now = datetime.now()
         while self.__serial.in_waiting > 0:
-            self.__logger.debug("waiting for serial input...")
             self.read_commands(now)
 
         if self.__first_run:
