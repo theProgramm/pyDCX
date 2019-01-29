@@ -178,7 +178,7 @@ class Ultadrive(threading.Thread):
             self.__logger.warn(f"Serial exception - continuing with demo data \n{e}")
             self.setup_dummy_data()
 
-    def patchBuffer(self, device_id: int, low_param: int, high_param: int, l):
+    def patch_buffer(self, device_id: int, low_param: int, high_param: int, l):
         device: Device = self.__devices[device_id]
         low = 0
         middle = 1
@@ -288,14 +288,14 @@ class Ultadrive(threading.Thread):
                         value_high = packet[const.VALUE_HI_BYTE + offset]
                         value_low = packet[const.VALUE_LOW_BYTE + offset]
                         if channel == 0:
-                            self.patchBuffer(device_id, value_low, value_high,
-                                             buffer.SETUP_LOCATIONS[param - (11 if param <= 11 else 10)])
+                            self.patch_buffer(device_id, value_low, value_high,
+                                              buffer.SETUP_LOCATIONS[param - (11 if param <= 11 else 10)])
                         elif channel <= 4:
-                            self.patchBuffer(device_id, value_low, value_high,
-                                             buffer.INPUT_LOCATIONS[channel - 1][param - 2])
+                            self.patch_buffer(device_id, value_low, value_high,
+                                              buffer.INPUT_LOCATIONS[channel - 1][param - 2])
                         elif channel <= 10:
-                            self.patchBuffer(device_id, value_low, value_high,
-                                             buffer.OUTPUT_LOCATIONS[channel - 5][param - 2])
+                            self.patch_buffer(device_id, value_low, value_high,
+                                              buffer.OUTPUT_LOCATIONS[channel - 5][param - 2])
                 else:
                     raise RuntimeError(f"received malformed response - unrecognized command {command}")
             else:
@@ -321,14 +321,14 @@ class Ultadrive(threading.Thread):
             value_high: int = out_string[const.VALUE_HI_BYTE + offset]
             value_low: int = out_string[const.VALUE_LOW_BYTE + offset]
             if channel == 0:
-                self.patchBuffer(device_id, value_low, value_high,
-                                 buffer.SETUP_LOCATIONS[param - (2 if param <= 11 else 10)])
+                self.patch_buffer(device_id, value_low, value_high,
+                                  buffer.SETUP_LOCATIONS[param - (2 if param <= 11 else 10)])
             elif channel <= 4:
-                self.patchBuffer(device_id, value_low, value_high,
-                                 buffer.INPUT_LOCATIONS[channel - 1][param - 2])
+                self.patch_buffer(device_id, value_low, value_high,
+                                  buffer.INPUT_LOCATIONS[channel - 1][param - 2])
             elif channel <= 10:
-                self.patchBuffer(device_id, value_low, value_high,
-                                 buffer.OUTPUT_LOCATIONS[channel - 5][param - 2])
+                self.patch_buffer(device_id, value_low, value_high,
+                                  buffer.OUTPUT_LOCATIONS[channel - 5][param - 2])
 
         self.write(out_string)
         return device_id
