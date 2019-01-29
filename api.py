@@ -1,3 +1,5 @@
+import time
+
 import flask
 from flask import Blueprint
 from flask import request
@@ -36,5 +38,7 @@ class Api:
 
     def commands(self):
         self.__http_logger.info(f"commands: {request} data: {request.data}")
-        self.__ultradrive.process_outgoing(request.data)
+        device_id = self.__ultradrive.process_outgoing(request.data)
+        while self.__ultradrive.devices()[device_id].invalidate_sync:
+            time.sleep(0.0001)
         return "", 204

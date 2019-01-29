@@ -2,6 +2,7 @@ import atexit
 import threading
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from time import sleep
 from typing import Dict
 
 import serial
@@ -169,11 +170,12 @@ class Ultadrive(threading.Thread):
             self.__logger.debug("connecting not failed - looping")
             while self.__running:
                 self.looping()
+                sleep(0.0001)
         except serial.serialutil.SerialException as e:
             self.__logger.warn(f"Serial exception - continuing with demo data \n{e}")
             self.setup_dummy_data()
 
-    def patchBuffer(self, device_id: int, low: int, high: int, l):
+    def patchBuffer(self, device_id: int, low_param: int, high_param: int, l):
         device: Device = self.__devices[device_id]
         low = 0
         middle = 1
@@ -183,9 +185,9 @@ class Ultadrive(threading.Thread):
         index = 2
 
         if l[low][part] == 0:
-            device.dump0[l[low][byte]] = low
+            device.dump0[l[low][byte]] = low_param
         elif l[low][part] == 1:
-            device.dump1[l[low][byte]] = low
+            device.dump1[l[low][byte]] = low_param
 
         if l[middle][byte] > 0:
             if l[middle][part] == 0:
@@ -199,7 +201,7 @@ class Ultadrive(threading.Thread):
                 else:
                     device.dump1[l[middle][byte]] &= (1 << l[middle][index])
         if l[high][byte] > 0:
-            high_byte = high >> 1
+            high_byte = high_param >> 1
             if l[high][part] == 0:
                 device.dump0[l[high][byte]] = high_byte
             elif l[high][part] == 1:
@@ -305,7 +307,6 @@ class Ultadrive(threading.Thread):
 
         device_id: int = out_string[const.ID_BYTE]
         command: int = out_string[const.COMMAND_BYTE]
-
         if command != const.DIRECT_COMMAND:
             raise RuntimeError(f"command is no direct command")
         self.__devices[device_id].invalidate_sync = True
@@ -326,7 +327,8 @@ class Ultadrive(threading.Thread):
                 self.patchBuffer(device_id, value_low, value_high,
                                  buffer.OUTPUT_LOCATIONS[channel - 5][param - 2])
 
-            self.write(out_string)
+        self.write(out_string)
+        return device_id
 
 # void Ultradrive::processIncoming(unsigned long now) {
 #   while (serial->available() > 0) {
