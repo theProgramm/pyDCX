@@ -63,6 +63,7 @@ class Device:
 
     def register(self, ultradrive, now: datetime):
         self.is_new = False
+        self.last_pong = now
         self.set_transmit_mode(ultradrive)
         with self.lock:
             self.dump_counter.acquire()
