@@ -250,7 +250,7 @@ class Ultadrive(Thread):
             while self.__running:
                 try:
                     self.looping()
-                    sleep(250.0000)
+                    sleep(0.250)
                 except RuntimeError as e:
                     self.__logger.warn(e)
         except serial.serialutil.SerialException as e:
