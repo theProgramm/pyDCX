@@ -333,7 +333,7 @@ class Ultadrive(Thread):
                         raise RuntimeError(
                             self.exception_text("ping response", len(packet), const.PING_RESPONSE_LENGTH, packet))
                 elif command == const.DIRECT_COMMAND:
-                    await device.update_from_command(packet)
+                    device.update_from_command(packet)
                 else:
                     raise RuntimeError(f"received malformed response - unrecognized command {command}")
             else:
@@ -353,7 +353,7 @@ class Ultadrive(Thread):
             raise RuntimeError(f"command did not start with {const.VENDOR_HEADER}")
 
         device_id: int = out_string[const.ID_BYTE]
-        await self.__devices[device_id].update_from_outgoing_command(out_string)
+        self.__devices[device_id].update_from_outgoing_command(out_string)
         self.write(out_string)
         return device_id
 
