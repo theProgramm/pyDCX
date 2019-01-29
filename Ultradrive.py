@@ -326,6 +326,8 @@ class Ultadrive(Thread):
                     elif part == 1:
                         if len(packet) == const.PART_1_LENGTH:
                             device.set_dump1(packet)
+                            self.__logger.debug(
+                                f"semaphor locking state after set_dump1: {device.dump_counter.locked()}")
                         else:
                             raise RuntimeError(
                                 self.exception_text("dump response #1", len(packet), const.PART_1_LENGTH, packet))
