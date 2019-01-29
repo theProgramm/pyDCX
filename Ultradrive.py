@@ -59,11 +59,11 @@ class Device:
         self.ping_response = new_ping_response
         self.last_pong = now
 
-    async def register(self, ultradrive, now: datetime):
+    def register(self, ultradrive, now: datetime):
         self.is_new = False
         self.last_ping = now
         self.set_transmit_mode(ultradrive)
-        async with self.lock:
+        with self.lock:
             self.dump_counter.acquire()
             self.dump_counter.acquire()
         self.dump(ultradrive, 0)
@@ -88,10 +88,10 @@ class Device:
             1, "big") + b'\x0E\x3F\x0C\x00' + const.TERMINATOR
         ultradrive.write(transmit_mode_command)
 
-    async def update_from_command(self, packet):
-        async with self.lock:
-            async with self.dump_counter:
-                async with self.dump_counter:
+    def update_from_command(self, packet):
+        with self.lock:
+            with self.dump_counter:
+                with self.dump_counter:
                     count = packet[const.PARAM_COUNT_BYTE]
                     for i in range(count):
                         offset = 4 * i
@@ -100,16 +100,16 @@ class Device:
                         value_high = packet[const.VALUE_HI_BYTE + offset]
                         value_low = packet[const.VALUE_LOW_BYTE + offset]
                         if channel == 0:
-                            await self.patch_buffer(value_low, value_high,
-                                                    buffer.SETUP_LOCATIONS[param - (11 if param <= 11 else 10)])
+                            self.patch_buffer(value_low, value_high,
+                                              buffer.SETUP_LOCATIONS[param - (11 if param <= 11 else 10)])
                         elif channel <= 4:
-                            await self.patch_buffer(value_low, value_high,
-                                                    buffer.INPUT_LOCATIONS[channel - 1][param - 2])
+                            self.patch_buffer(value_low, value_high,
+                                              buffer.INPUT_LOCATIONS[channel - 1][param - 2])
                         elif channel <= 10:
-                            await self.patch_buffer(value_low, value_high,
-                                                    buffer.OUTPUT_LOCATIONS[channel - 5][param - 2])
+                            self.patch_buffer(value_low, value_high,
+                                              buffer.OUTPUT_LOCATIONS[channel - 5][param - 2])
 
-    async def patch_buffer(self, low_param: int, high_param: int, l):
+    def patch_buffer(self, low_param: int, high_param: int, l):
         low = 0
         middle = 1
         high = 2
@@ -140,10 +140,10 @@ class Device:
             elif l[high][part] == 1:
                 self.dump1[l[high][byte]] = high_byte
 
-    async def update_from_outgoing_command(self, out_string):
-        async with self.lock:
-            async with self.dump_counter:
-                async with self.dump_counter:
+    def update_from_outgoing_command(self, out_string):
+        with self.lock:
+            with self.dump_counter:
+                with self.dump_counter:
                     command: int = out_string[const.COMMAND_BYTE]
                     if command != const.DIRECT_COMMAND:
                         raise RuntimeError(f"command is no direct command")
@@ -155,19 +155,19 @@ class Device:
                         value_high: int = out_string[const.VALUE_HI_BYTE + offset]
                         value_low: int = out_string[const.VALUE_LOW_BYTE + offset]
                         if channel == 0:
-                            await self.patch_buffer(value_low, value_high,
-                                                    buffer.SETUP_LOCATIONS[param - (2 if param <= 11 else 10)])
+                            self.patch_buffer(value_low, value_high,
+                                              buffer.SETUP_LOCATIONS[param - (2 if param <= 11 else 10)])
                         elif channel <= 4:
-                            await self.patch_buffer(value_low, value_high,
-                                                    buffer.INPUT_LOCATIONS[channel - 1][param - 2])
+                            self.patch_buffer(value_low, value_high,
+                                              buffer.INPUT_LOCATIONS[channel - 1][param - 2])
                         elif channel <= 10:
-                            await self.patch_buffer(value_low, value_high,
-                                                    buffer.OUTPUT_LOCATIONS[channel - 5][param - 2])
+                            self.patch_buffer(value_low, value_high,
+                                              buffer.OUTPUT_LOCATIONS[channel - 5][param - 2])
 
-    async def to_gui(self) -> bytearray:
-        async with self.lock:
-            async with self.dump_counter:
-                async with self.dump_counter:
+    def to_gui(self) -> bytearray:
+        with self.lock:
+            with self.dump_counter:
+                with self.dump_counter:
                     ret = bytearray()
                     ret.extend(self.dump0)
                     ret.extend(self.dump1)
