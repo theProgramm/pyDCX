@@ -263,20 +263,24 @@ class Ultadrive(Thread):
             self.read_commands(now)
 
         if self.__first_run:
+            self.__logger.debug("first run")
             self.__first_run = False
             self.__last_search = now
             self.search()
             return
         if now - self.__last_search >= SEARCH_INTERVAL:
+            self.__logger.debug("search timed out")
             self.__last_search = now
             self.search()
             return
         for i in range(const.MAX_DEVICES):
             device = self.__devices[i]
             if device.is_new:
+                self.__logger.debug(f"found new device with id {i}")
                 device.register(self, now)
             elif device.is_active(now):
                 if not device.is_up_to_date(now):
+                    self.__logger.debug(f"pinging device {i}")
                     device.ping(self, now)
 
     def read_commands(self, now: datetime):
