@@ -289,7 +289,7 @@ class Ultadrive(threading.Thread):
             else:
                 raise RuntimeError(f"received malfromed response - no vendor header given")
 
-    def process_outgoing(self, out_buffer):
+    # def process_outgoing(self, out_buffer):
 # void Ultradrive::processOutgoing(Request* req) {
 #   if (int bytesRead = req->readBytesUntil(TERMINATOR, serverBuffer, PART_0_LENGTH)) {
 #     serverBuffer[bytesRead++] = TERMINATOR;
