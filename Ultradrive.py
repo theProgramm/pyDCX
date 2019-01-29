@@ -258,7 +258,6 @@ class Ultadrive(Thread):
             self.setup_dummy_data()
 
     def looping(self):
-        self.__logger.debug("looping")
         now = datetime.now()
         while self.__serial.in_waiting > 0:
             self.read_commands(now)
