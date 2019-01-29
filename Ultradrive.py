@@ -6,6 +6,7 @@ from typing import Dict
 
 import serial
 
+import buffer
 import const
 
 PING_INTERVAL = timedelta(milliseconds=const.PING_INTEVAL)
@@ -87,13 +88,6 @@ class Ultadrive(threading.Thread):
         self.__devices[0].search_response = b'\xf0\x00 2\x00\x0e\x00\x01\x11DCX2496         \xf7'
         self.__devices[0].is_new = False
         self.__devices[0].last_pong = datetime.now()
-        #
-        # for n, d in self.devices().items():
-        #     new_ping = bytearray.fromhex("f0002032000e000111444358323439362d3020202020202020f7")
-        #     new_ping[const.COMMAND_BYTE] = const.SEARCH_RESPONSE
-        #     new_ping[const.ID_BYTE] = n
-        #     d.ping_response = new_ping
-        #     d.is_new = False
 
     def write(self, data):
         self.__serial.write(data)
@@ -170,6 +164,38 @@ class Ultadrive(threading.Thread):
             self.__logger.warn(f"Serial exception - continuing with demo data \n{e}")
             self.setup_dummy_data()
 
+    def patchBuffer(self, device_id: int, low: int, high: int, l):
+        device: Device = self.__devices[device_id]
+        low = 0
+        middle = 1
+        high = 2
+        part = 0
+        byte = 1
+        index = 2
+
+        if l[low][part] == 0:
+            device.dump0[l[low][byte]] = low
+        elif l[low][part] == 1:
+            device.dump1[l[low][byte]] = low
+
+        if l[middle][byte] > 0:
+            if l[middle][part] == 0:
+                if high & 1 == 0:
+                    device.dump0[l[middle][byte]] |= (1 << l[middle][index])
+                else:
+                    device.dump0[l[middle][byte]] &= (1 << l[middle][index])
+            elif l[middle][byte] == 1:
+                if high & 1 == 0:
+                    device.dump1[l[middle][byte]] |= (1 << l[middle][index])
+                else:
+                    device.dump1[l[middle][byte]] &= (1 << l[middle][index])
+        if l[high][byte] > 0:
+            high_byte = high >> 1
+            if l[high][part] == 0:
+                device.dump0[l[high][byte]] = high_byte
+            elif l[high][part] == 1:
+                device.dump1[l[high][byte]] = high_byte
+
     def exception_text(self, infix, actual: int, expected: int, packet):
         text = "received malformed response - " + infix + f" has wrong length {actual} instead of {expected}"
         if self.__packet_logger.level > 10:  # 10 == DEBUG
@@ -242,7 +268,6 @@ class Ultadrive(threading.Thread):
                         raise RuntimeError(
                             self.exception_text("ping response", len(packet), const.PING_RESPONSE_LENGTH, packet))
                 elif command == const.DIRECT_COMMAND:
-                    return
                     count = packet[const.PARAM_COUNT_BYTE]
                     for i in range(count):
                         offset = 4 * i
@@ -252,17 +277,52 @@ class Ultadrive(threading.Thread):
                         value_low = packet[const.VALUE_LOW_BYTE + offset]
                         if channel == 0:
                             self.patchBuffer(device_id, value_low, value_high,
-                                             self.setupLocations[param - (11 if param <= 11 else 10)])
+                                             buffer.SETUP_LOCATIONS[param - (11 if param <= 11 else 10)])
                         elif channel <= 4:
                             self.patchBuffer(device_id, value_low, value_high,
-                                             self.inputLocations[channel - 1][param - 2])
+                                             buffer.INPUT_LOCATIONS[channel - 1][param - 2])
                         elif channel <= 10:
                             self.patchBuffer(device_id, value_low, value_high,
-                                             self.outputLocations[channel - 5][param - 2])
+                                             buffer.OUTPUT_LOCATIONS[channel - 5][param - 2])
                 else:
                     raise RuntimeError(f"received malformed response - unrecognized command {command}")
             else:
                 raise RuntimeError(f"received malfromed response - no vendor header given")
+
+    def process_outgoing(self, out_buffer):
+# void Ultradrive::processOutgoing(Request* req) {
+#   if (int bytesRead = req->readBytesUntil(TERMINATOR, serverBuffer, PART_0_LENGTH)) {
+#     serverBuffer[bytesRead++] = TERMINATOR;
+#
+#     if (!memcmp(serverBuffer, vendorHeader, 5)) {
+#       int deviceId = serverBuffer[ID_BYTE];
+#       int command = serverBuffer[COMMAND_BYTE];
+#
+#       if (command == DIRECT_COMMAND) {
+#         devices[deviceId].invalidateSync = true;
+#         int count = serverBuffer[PARAM_COUNT_BYTE];
+#
+#         for (int i = 0; i < count; i++) {
+#           int offset = (4 * i);
+#           int channel = serverBuffer[CHANNEL_BYTE + offset];
+#           int param = serverBuffer[PARAM_BYTE + offset];
+#           int valueHigh = serverBuffer[VALUE_HI_BYTE + offset];
+#           int valueLow = serverBuffer[VALUE_LOW_BYTE + offset];
+#
+#           if (!channel) {
+#             patchBuffer(deviceId, valueLow, valueHigh, setupLocations[param - (param <= 11 ? 2 : 10)]);
+#           } else if (channel <= 4) {
+#             patchBuffer(deviceId, valueLow, valueHigh, inputLocations[channel - 1][param - 2]);
+#           } else if (channel <= 10) {
+#             patchBuffer(deviceId, valueLow, valueHigh, outputLocations[channel - 5][param - 2]);
+#           }
+#         }
+#
+#         write(serverBuffer, bytesRead);
+#       }
+#     }
+#   }
+# }
 #
 # void Ultradrive::processIncoming(unsigned long now) {
 #   while (serial->available() > 0) {
