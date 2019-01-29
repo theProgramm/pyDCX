@@ -169,7 +169,10 @@ class Ultadrive(threading.Thread):
             atexit.register(self.stop)
             self.__logger.debug("connecting not failed - looping")
             while self.__running:
-                self.looping()
+                try:
+                    self.looping()
+                except RuntimeError as e:
+                    self.__logger.warn(e)
                 sleep(0.0001)
         except serial.serialutil.SerialException as e:
             self.__logger.warn(f"Serial exception - continuing with demo data \n{e}")
