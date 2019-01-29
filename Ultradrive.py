@@ -41,7 +41,7 @@ class Device:
         return now - self.last_pong < TIMEOUT
 
     def is_up_to_date(self, now):
-        return now - self.last_ping < PING_INTERVAL
+        return now < self.last_ping + PING_INTERVAL
 
     def set_dump0(self, new_dump: bytearray):
         self.dump0[:] = new_dump[:]
@@ -276,13 +276,13 @@ class Ultadrive(Thread):
             return
         for i in range(const.MAX_DEVICES):
             device = self.__devices[i]
-            self.__logger.debug(f"checking device {i}")
             if device.is_new:
                 self.__logger.debug(f"registering new device {i}")
                 device.register(self, now)
             elif device.is_active(now):
+                self.__logger.debug(f"device {i} found active")
                 if not device.is_up_to_date(now):
-                    self.__logger.debug(f"pinging device {i}")
+                    self.__logger.debug(f"device {i} not up to date")
                     device.ping(self, now)
 
     def read_commands(self, now: datetime):
