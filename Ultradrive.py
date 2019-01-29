@@ -22,11 +22,11 @@ class Device:
     search_response: bytearray
     ping_response: bytearray
     device_id: int
+    dump_counter: BoundedSemaphore
+    lock: RLock
     last_ping: datetime = NULL_TIME
     last_pong: datetime = NULL_TIME
     is_new: bool = True
-    dump_counter: BoundedSemaphore = BoundedSemaphore(2)
-    lock: RLock = RLock()
 
     def __init__(self, device_id: int):
         self.dump0: bytearray = bytearray(const.PART_0_LENGTH)
@@ -34,6 +34,8 @@ class Device:
         self.search_response: bytearray = bytearray(const.SEARCH_RESPONSE_LENGTH)
         self.ping_response: bytearray = bytearray(const.PING_RESPONSE_LENGTH)
         self.device_id = device_id
+        self.dump_counter = BoundedSemaphore(2)
+        self.lock = RLock()
 
     def is_active(self, now):
         return now - self.last_pong < TIMEOUT
