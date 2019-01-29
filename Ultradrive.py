@@ -63,7 +63,6 @@ class Device:
 
     def register(self, ultradrive, now: datetime):
         self.is_new = False
-        self.last_ping = now
         self.set_transmit_mode(ultradrive)
         with self.lock:
             self.dump_counter.acquire()
@@ -287,7 +286,6 @@ class Ultadrive(Thread):
 
     def read_commands(self, now: datetime):
         b: bytes = self.__serial.read(1)
-        self.io_logger.debug(f"read new byte {b}")
         if b == const.COMMAND_START:
             self.packet_logger.debug("new command started")
             self.__reading_command = True
