@@ -1,3 +1,4 @@
+from datetime import datetime
 from threading import RLock
 
 import flask
@@ -23,8 +24,9 @@ class Api:
 
     def devices(self):
         ret = bytearray()
+        now = datetime.now()
         for n, d in self.__ultradrive.devices().items():
-            if d.last_pong is not None:
+            if d.is_active(now):
                 ret.extend(d.search_response)
         self.__http_logger.debug(f"devies -> {ret}")
         return flask.make_response(ret)
