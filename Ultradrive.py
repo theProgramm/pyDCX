@@ -70,20 +70,20 @@ class Device:
         self.dump(ultradrive, 1)
 
     def ping(self, ultradrive, now: datetime):
-        ultradrive.__io_logger.info(f"pinging {self.device_id}")
+        ultradrive.io_logger.info(f"pinging {self.device_id}")
         self.last_ping = now
         ping_command = b'\xF0\x00\x20\x32' + self.device_id.to_bytes(
             1, "big") + b'\x0E\x44\x00\x00' + const.TERMINATOR
         ultradrive.write(ping_command)
 
     def dump(self, ultradrive, part: int):
-        ultradrive.__io_logger.info(f"dumping {self.device_id} {part}")
+        ultradrive.io_logger.info(f"dumping {self.device_id} {part}")
         dump_command = b'\xF0\x00\x20\x32' + self.device_id.to_bytes(
             1, "big") + b'\x0E\x50\x01\x00' + part.to_bytes(1, "big") + const.TERMINATOR
         ultradrive.write(dump_command)
 
     def set_transmit_mode(self, ultradrive):
-        ultradrive.__io_logger.info(f"setting transmit mode for device {self.device_id}")
+        ultradrive.io_logger.info(f"setting transmit mode for device {self.device_id}")
         transmit_mode_command = b'\xF0\x00\x20\x32' + self.device_id.to_bytes(
             1, "big") + b'\x0E\x3F\x0C\x00' + const.TERMINATOR
         ultradrive.write(transmit_mode_command)
