@@ -260,6 +260,7 @@ class Ultadrive(Thread):
     def looping(self):
         now = datetime.now()
         while self.__serial.in_waiting > 0:
+            self.__logger.debug("waiting for serial input...")
             self.read_commands(now)
 
         if self.__first_run:
@@ -275,6 +276,7 @@ class Ultadrive(Thread):
             return
         for i in range(const.MAX_DEVICES):
             device = self.__devices[i]
+            self.__logger.debug(f"checking device {i}")
             if device.is_new:
                 self.__logger.debug(f"registering new device {i}")
                 device.register(self, now)
