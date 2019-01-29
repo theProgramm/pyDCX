@@ -250,7 +250,7 @@ class Ultadrive(Thread):
             while self.__running:
                 try:
                     self.looping()
-                    sleep(0.0001)
+                    sleep(250.0000)
                 except RuntimeError as e:
                     self.__logger.warn(e)
         except serial.serialutil.SerialException as e:
@@ -326,8 +326,6 @@ class Ultadrive(Thread):
                     elif part == 1:
                         if len(packet) == const.PART_1_LENGTH:
                             device.set_dump1(packet)
-                            self.__logger.debug(
-                                f"semaphor locking state after set_dump1: {device.dump_counter.locked()}")
                         else:
                             raise RuntimeError(
                                 self.exception_text("dump response #1", len(packet), const.PART_1_LENGTH, packet))
