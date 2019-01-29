@@ -22,8 +22,8 @@ class Device:
     search_response: bytearray
     ping_response: bytearray
     device_id: int
-    last_ping: datetime = None
-    last_pong: datetime = None
+    last_ping: datetime = NULL_TIME
+    last_pong: datetime = NULL_TIME
     is_new: bool = True
     dump_counter: BoundedSemaphore = BoundedSemaphore(2)
     lock: RLock = RLock()
