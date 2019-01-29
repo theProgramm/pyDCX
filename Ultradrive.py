@@ -133,12 +133,12 @@ class Device:
 
         if l[middle][byte] > 0:
             if l[middle][part] == 0:
-                if high & 1 == 0:
+                if high_param & 1 == 0:
                     self.dump0[l[middle][byte]] |= (1 << l[middle][index])
                 else:
                     self.dump0[l[middle][byte]] &= ~(1 << l[middle][index])
             elif l[middle][part] == 1:
-                if high & 1 == 0:
+                if high_param & 1 == 0:
                     self.dump1[l[middle][byte]] |= (1 << l[middle][index])
                 else:
                     self.dump1[l[middle][byte]] &= ~(1 << l[middle][index])
