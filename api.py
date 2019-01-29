@@ -21,7 +21,7 @@ class Api:
     def devices(self):
         ret = bytearray()
         for n, d in self.__ultradrive.devices().items():
-            if not d.is_new and d.last_pong is not None:
+            if d.last_pong is not None:
                 ret.extend(d.search_response)
         self.__http_logger.debug(f"devies -> {ret}")
         return flask.make_response(ret)
@@ -31,7 +31,7 @@ class Api:
             s = self.__ultradrive.device(n).to_gui()
         except KeyError as e:
             return "not found", 404
-        self.__http_logger.debug(f"device({n}) -> {s}")
+        self.__http_logger.info(f"device({n}) -> {s}")
         return flask.make_response(s)
 
     def commands(self):

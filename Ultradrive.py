@@ -60,7 +60,7 @@ class Ultadrive(threading.Thread):
         self.__read_buffer: bytearray = bytearray(const.PART_0_LENGTH)
         self.__reading_command = False
         self.__serial_read: int = 0
-        self.__logger.debug(f"created new Ultradrive thread {self}")
+        self.__logger.info(f"created new Ultradrive thread {self}")
 
     def devices(self) -> Dict[int, Device]:
         return self.__devices
@@ -69,7 +69,7 @@ class Ultadrive(threading.Thread):
         return self.__devices[n]
 
     def stop(self):
-        self.__logger.debug(f"stoppgin ultradrive thread {self}")
+        self.__logger.info(f"stoppgin ultradrive thread {self}")
         if not self.__running:
             raise RuntimeError("thread was not running when trying to stop it")
         else:
@@ -101,25 +101,25 @@ class Ultadrive(threading.Thread):
             raise RuntimeError("serial port not open when trying to write")
 
     def search(self):
-        self.__io_logger.debug("searching...")
+        self.__io_logger.infos("searching...")
         search_command = b'\xF0\x00\x20\x32\x20\x0E\x40' + bytes([247])
         self.write(search_command)
         self.__io_logger.debug("searching done")
 
     def ping(self, device_id: int):
-        self.__io_logger.debug(f"pinging {device_id}")
+        self.__io_logger.info(f"pinging {device_id}")
         ping_command = b'\xF0\x00\x20\x32' + device_id.to_bytes(
             1, "big") + b'\x0E\x44\x00\x00' + const.TERMINATOR
         self.write(ping_command)
 
     def dump(self, device_id: int, part: int):
-        self.__io_logger.debug(f"dumping {device_id} {part}")
+        self.__io_logger.info(f"dumping {device_id} {part}")
         dump_command = b'\xF0\x00\x20\x32' + device_id.to_bytes(
             1, "big") + b'\x0E\x50\x01\x00' + part.to_bytes(1, "big") + const.TERMINATOR
         self.write(dump_command)
 
     def set_transmit_mode(self, device_id: int):
-        self.__io_logger.debug(f"setting transmit mode for device {device_id}")
+        self.__io_logger.info(f"setting transmit mode for device {device_id}")
         transmit_mode_command = b'\xF0\x00\x20\x32' + device_id.to_bytes(
             1, "big") + b'\x0E\x3F\x0C\x00' + const.TERMINATOR
         self.write(transmit_mode_command)
@@ -230,7 +230,7 @@ class Ultadrive(threading.Thread):
                 command = packet[const.COMMAND_BYTE]
                 self.__packet_logger.debug(f"handling command {command} for device: {device_id}")
                 if device_id not in self.__devices:
-                    self.__packet_logger.debug(f"received command: {command} from unknown device_id: {device_id}")
+                    self.__packet_logger.info(f"received command: {command} from unknown device_id: {device_id}")
                     device = Device(device_id)
                     self.__devices[device_id] = device
                 else:
