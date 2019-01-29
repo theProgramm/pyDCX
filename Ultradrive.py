@@ -179,8 +179,8 @@ class Ultadrive(Thread):
     def __init__(self, logger):
         super(Ultadrive, self).__init__()
         self.__logger = logger.getChild("ultradrive")
-        self.__io_logger = self.__logger.getChild("io")
-        self.__packet_logger = self.__logger.getChild("packet")
+        self.io_logger = self.__logger.getChild("io")
+        self.packet_logger = self.__logger.getChild("packet")
         self.__devices: Dict[int, Device] = dict()
         for i in range(const.MAX_DEVICES):
             self.__devices[i] = Device(i)
@@ -227,16 +227,16 @@ class Ultadrive(Thread):
 
     def write(self, data):
         if self.__serial.isOpen():
-            self.__io_logger.info(f"writing {data}")
+            self.io_logger.info(f"writing {data}")
             self.__serial.write(data)
         else:
             raise RuntimeError("serial port not open when trying to write")
 
     def search(self):
-        self.__io_logger.info("searching...")
+        self.io_logger.info("searching...")
         search_command = b'\xF0\x00\x20\x32\x20\x0E\x40' + bytes([247])
         self.write(search_command)
-        self.__io_logger.debug("searching done")
+        self.io_logger.debug("searching done")
 
     def run(self):
         self.__logger.info(f"starting new ultradrive thread")
@@ -282,7 +282,7 @@ class Ultadrive(Thread):
         b: bytes = self.__serial.read(1)
 
         if b == const.COMMAND_START:
-            self.__packet_logger.debug("new command started")
+            self.packet_logger.debug("new command started")
             self.__reading_command = True
             self.__serial_read = 0
         if self.__reading_command and (self.__serial_read < const.PART_0_LENGTH):
@@ -293,12 +293,12 @@ class Ultadrive(Thread):
             self.__reading_command = False
             packet = self.__read_buffer[0:self.__serial_read]
             if packet.startswith(const.VENDOR_HEADER):
-                self.__packet_logger.debug(f"handling packet {packet}")
+                self.packet_logger.debug(f"handling packet {packet}")
                 device_id = packet[const.ID_BYTE]
                 command = packet[const.COMMAND_BYTE]
-                self.__packet_logger.info(f"handling command {command} for device: {device_id}")
+                self.packet_logger.info(f"handling command {command} for device: {device_id}")
                 if device_id not in self.__devices:
-                    self.__packet_logger.warning(f"received command: {command} from unknown device_id: {device_id}")
+                    self.packet_logger.warning(f"received command: {command} from unknown device_id: {device_id}")
                     device = Device(device_id)
                     self.__devices[device_id] = device
                 else:
@@ -341,7 +341,7 @@ class Ultadrive(Thread):
 
     def exception_text(self, infix, actual: int, expected: int, packet):
         text = "received malformed response - " + infix + f" has wrong length {actual} instead of {expected}"
-        if self.__packet_logger.level > 10:  # 10 == DEBUG
+        if self.packet_logger.level > 10:  # 10 == DEBUG
             text = text + str(packet)
         return text
 
