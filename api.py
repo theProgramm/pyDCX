@@ -1,5 +1,6 @@
 import flask
 from flask import Blueprint
+from flask import request
 
 import Ultradrive
 
@@ -13,8 +14,9 @@ class Api:
         self.__http_logger = self.__logger.getChild("http")
         self.__ultradrive = ultradrive
         self.api = Blueprint('api', __name__, url_prefix="/api")
-        self.api.add_url_rule("/devices/", view_func=self.devices)
+        self.api.add_url_rule("/devices", view_func=self.devices)
         self.api.add_url_rule("/devices/<int:n>", view_func=self.device)
+        self.api.add_url_rule("/commands", view_func=self.commands, methods=["POST"])
 
     def devices(self):
         ret = bytearray()
@@ -31,3 +33,8 @@ class Api:
             return "not found", 404
         self.__http_logger.debug(f"device({n}) -> {s}")
         return flask.make_response(s)
+
+    def commands(self):
+        self.__http_logger.info(f"commands: {request} data: {request.data}")
+        self.__ultradrive.process_outgoing(request.data)
+        return "", 204
