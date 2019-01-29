@@ -326,6 +326,9 @@ class Ultadrive(Thread):
                     part: int = packet[const.PART_BYTE]
                     if part == 0:
                         if len(packet) == const.PART_0_LENGTH:
+                            if device.dump0 != packet:
+                                self.__logger.warn(
+                                    f"patch buffer did not recognize something. buffer then extern: \n{device.dump0}\n\n{packet}")
                             device.set_dump0(packet)
                         else:
                             raise RuntimeError(
