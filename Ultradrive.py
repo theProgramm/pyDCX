@@ -71,6 +71,13 @@ class Device:
         self.dump(ultradrive, 0)
         self.dump(ultradrive, 1)
 
+    def write_command(self, ultradrive, command):
+        with self.lock:
+            with self.dump_counter:
+                with self.dump_counter:
+                    self.update_from_outgoing_command(command)
+                    ultradrive.write(command)
+
     def ping(self, ultradrive, now: datetime):
         ultradrive.io_logger.info(f"pinging {self.device_id}")
         self.last_ping = now
@@ -144,27 +151,25 @@ class Device:
 
     def update_from_outgoing_command(self, out_string):
         with self.lock:
-            with self.dump_counter:
-                with self.dump_counter:
-                    command: int = out_string[const.COMMAND_BYTE]
-                    if command != const.DIRECT_COMMAND:
-                        raise RuntimeError(f"command is no direct command")
-                    count = out_string[const.PARAM_COUNT_BYTE]
-                    for i in range(count):
-                        offset: int = 4 * i
-                        channel: int = out_string[const.CHANNEL_BYTE + offset]
-                        param: int = out_string[const.PARAM_BYTE + offset]
-                        value_high: int = out_string[const.VALUE_HI_BYTE + offset]
-                        value_low: int = out_string[const.VALUE_LOW_BYTE + offset]
-                        if channel == 0:
-                            self.patch_buffer(value_low, value_high,
-                                              buffer.SETUP_LOCATIONS[param - (2 if param <= 11 else 10)])
-                        elif channel <= 4:
-                            self.patch_buffer(value_low, value_high,
-                                              buffer.INPUT_LOCATIONS[channel - 1][param - 2])
-                        elif channel <= 10:
-                            self.patch_buffer(value_low, value_high,
-                                              buffer.OUTPUT_LOCATIONS[channel - 5][param - 2])
+            command: int = out_string[const.COMMAND_BYTE]
+            if command != const.DIRECT_COMMAND:
+                raise RuntimeError(f"command is no direct command")
+            count = out_string[const.PARAM_COUNT_BYTE]
+            for i in range(count):
+                offset: int = 4 * i
+                channel: int = out_string[const.CHANNEL_BYTE + offset]
+                param: int = out_string[const.PARAM_BYTE + offset]
+                value_high: int = out_string[const.VALUE_HI_BYTE + offset]
+                value_low: int = out_string[const.VALUE_LOW_BYTE + offset]
+                if channel == 0:
+                    self.patch_buffer(value_low, value_high,
+                                      buffer.SETUP_LOCATIONS[param - (2 if param <= 11 else 10)])
+                elif channel <= 4:
+                    self.patch_buffer(value_low, value_high,
+                                      buffer.INPUT_LOCATIONS[channel - 1][param - 2])
+                elif channel <= 10:
+                    self.patch_buffer(value_low, value_high,
+                                      buffer.OUTPUT_LOCATIONS[channel - 5][param - 2])
 
     def to_gui(self) -> bytearray:
         with self.lock:
@@ -359,8 +364,7 @@ class Ultadrive(Thread):
             raise RuntimeError(f"command did not start with {const.VENDOR_HEADER}")
 
         device_id: int = out_string[const.ID_BYTE]
-        self.__devices[device_id].update_from_outgoing_command(out_string)
-        self.write(out_string)
+        self.__devices[device_id].write_command(self, out_string)
         return device_id
 
 # void Ultradrive::processIncoming(unsigned long now) {
