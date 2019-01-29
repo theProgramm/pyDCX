@@ -194,12 +194,12 @@ class Ultadrive(threading.Thread):
                 if high & 1 == 0:
                     device.dump0[l[middle][byte]] |= (1 << l[middle][index])
                 else:
-                    device.dump0[l[middle][byte]] &= (1 << l[middle][index])
+                    device.dump0[l[middle][byte]] &= ~(1 << l[middle][index])
             elif l[middle][byte] == 1:
                 if high & 1 == 0:
                     device.dump1[l[middle][byte]] |= (1 << l[middle][index])
                 else:
-                    device.dump1[l[middle][byte]] &= (1 << l[middle][index])
+                    device.dump1[l[middle][byte]] &= ~(1 << l[middle][index])
         if l[high][byte] > 0:
             high_byte = high_param >> 1
             if l[high][part] == 0:

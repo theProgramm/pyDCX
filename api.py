@@ -1,4 +1,3 @@
-import time
 from threading import RLock
 
 import flask
@@ -31,18 +30,14 @@ class Api:
         return flask.make_response(ret)
 
     def device(self, n: int):
-        with self.lock:
-            try:
-                s = self.__ultradrive.device(n).to_gui()
-            except KeyError as e:
-                return "not found", 404
-            self.__http_logger.debug(f"device({n}) -> {s}")
-            return flask.make_response(s)
+        try:
+            s = self.__ultradrive.device(n).to_gui()
+        except KeyError as e:
+            return "not found", 404
+        self.__http_logger.debug(f"device({n}) -> {s}")
+        return flask.make_response(s)
 
     def commands(self):
-        with self.lock:
-            self.__http_logger.info(f"commands: {request} data: {request.data}")
-            device_id = self.__ultradrive.process_outgoing(request.data)
-            while self.__ultradrive.devices()[device_id].invalidate_sync:
-                time.sleep(0.0001)
-            return "", 204
+        self.__http_logger.info(f"commands: {request} data: {request.data}")
+        self.__ultradrive.process_outgoing(request.data)
+        return "", 204
