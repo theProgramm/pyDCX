@@ -26,7 +26,7 @@ class Device:
     lock: RLock
     last_ping: datetime = NULL_TIME
     last_pong: datetime = NULL_TIME
-    is_new: bool = True
+    is_new: bool = False
 
     def __init__(self, device_id: int):
         self.dump0: bytearray = bytearray(const.PART_0_LENGTH)
