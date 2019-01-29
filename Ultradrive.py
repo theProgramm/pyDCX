@@ -229,7 +229,7 @@ class Ultadrive(Thread):
 
     def write(self, data):
         if self.__serial.isOpen():
-            self.io_logger.info(f"writing {data}")
+            self.io_logger.debug(f"writing {data}")
             self.__serial.write(data)
         else:
             raise RuntimeError("serial port not open when trying to write")
