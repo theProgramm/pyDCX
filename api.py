@@ -31,7 +31,7 @@ class Api:
             s = self.__ultradrive.device(n).to_gui()
         except KeyError as e:
             return "not found", 404
-        self.__http_logger.info(f"device({n}) -> {s}")
+        self.__http_logger.debug(f"device({n}) -> {s}")
         return flask.make_response(s)
 
     def commands(self):

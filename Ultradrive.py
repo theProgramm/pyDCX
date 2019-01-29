@@ -101,7 +101,7 @@ class Ultadrive(threading.Thread):
             raise RuntimeError("serial port not open when trying to write")
 
     def search(self):
-        self.__io_logger.infos("searching...")
+        self.__io_logger.info("searching...")
         search_command = b'\xF0\x00\x20\x32\x20\x0E\x40' + bytes([247])
         self.write(search_command)
         self.__io_logger.debug("searching done")
