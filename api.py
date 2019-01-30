@@ -1,5 +1,4 @@
 from datetime import datetime
-from threading import RLock
 
 import flask
 from flask import Blueprint
@@ -11,7 +10,6 @@ import Ultradrive
 class Api:
     api: Blueprint
     __ultradrive: Ultradrive
-    lock: RLock = RLock()
 
     def __init__(self, logger, ultradrive: Ultradrive):
         self.__logger = logger.getChild("api")

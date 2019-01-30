@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+</head>
+<body>
+<form id="preset_form" name="preset" action="/api/preset" method="post">
+    <label for="preset_select">load preset:
+        <select name="selection" form="preset_form" id="preset_select" autofocus required>
+            <option value="" disabled selected>load preset:</option>
+            <option value="open">offen</option>
+            <option value="past12">nach 0 Uhr</option>
+            <option value="closed">geschlossen</option>
+            <option value="sumpf">sumpfen</option>
+            <option value="working">am lernen</option>
+        </select>
+    </label>
+    <button id="submit_button" type="submit" value="submit">load</button>
+</form>
+
+<script type="text/javascript">
+    document.getElementById("preset_select").onchange = function () {
+        document.getElementById("preset_form").submit()
+    }
+    document.getElementById("submit_button").hidden = true
+</script>
+</body>
