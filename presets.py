@@ -19,7 +19,7 @@ class Presets:
         self.__preset_files = []
         self.fetch_preset_files()
         self.__http_logger = self.__logger.getChild("http")
-        self.__ultradrive = ultradrive
+        self.__ultradrive: Ultradrive = ultradrive
         self.blue_print = Blueprint('presets', __name__, url_prefix="")
         self.blue_print.add_url_rule("api/preset", view_func=self.preset, methods=["POST"])
         self.blue_print.add_url_rule("/preset", view_func=self.file, methods=["GET"])
@@ -39,6 +39,10 @@ class Presets:
         preset = request.form["selection"]
         if preset not in self.__preset_files:
             return "not found", 404
+
+        device: Ultradrive.Device = self.__ultradrive.device(0)
+        if device is None:
+            return "not available", 401  # FIXME use correct status code
 
         with open(PRESET_PATH + preset) as f:
             data = json.load(f)

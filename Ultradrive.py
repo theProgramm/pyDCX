@@ -8,6 +8,7 @@ import serial
 
 import buffer
 import const
+import protocoll
 
 PING_INTERVAL = timedelta(milliseconds=const.PING_INTEVAL)
 SEARCH_INTERVAL = timedelta(milliseconds=const.SEARCH_INTERVAL)
@@ -81,20 +82,17 @@ class Device:
     def ping(self, ultradrive, now: datetime):
         ultradrive.io_logger.info(f"pinging {self.device_id}")
         self.last_ping = now
-        ping_command = b'\xF0\x00\x20\x32' + self.device_id.to_bytes(
-            1, "big") + b'\x0E\x44\x00\x00' + const.TERMINATOR
+        ping_command = protocoll.ping(self.device_id)
         ultradrive.write(ping_command)
 
     def dump(self, ultradrive, part: int):
         ultradrive.io_logger.info(f"dumping {self.device_id} {part}")
-        dump_command = b'\xF0\x00\x20\x32' + self.device_id.to_bytes(
-            1, "big") + b'\x0E\x50\x01\x00' + part.to_bytes(1, "big") + const.TERMINATOR
+        dump_command = protocoll.dump(self.device_id, part)
         ultradrive.write(dump_command)
 
     def set_transmit_mode(self, ultradrive):
         ultradrive.io_logger.info(f"setting transmit mode for device {self.device_id}")
-        transmit_mode_command = b'\xF0\x00\x20\x32' + self.device_id.to_bytes(
-            1, "big") + b'\x0E\x3F\x0C\x00' + const.TERMINATOR
+        transmit_mode_command = protocoll.set_transmit_mode(self.device_id)
         ultradrive.write(transmit_mode_command)
 
     def update_from_command(self, packet):
@@ -238,7 +236,7 @@ class Ultadrive(Thread):
             self.io_logger.debug(f"writing {data}")
             self.__serial.write(data)
         else:
-            raise RuntimeError("serial port not open when trying to write")
+            raise RuntimeError("serial port not open.json when trying to write")
 
     def search(self):
         self.io_logger.info("searching...")
