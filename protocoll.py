@@ -24,7 +24,7 @@ def set_muted(device_id: int, channel_id: int, muted: bool):
 
 
 def internal_volume_from_display_value(v: float):
-    return math.floor(v * 10 + 150).to_bytes(2, "big")
+    return (math.floor(v * 10) + 150).to_bytes(2, "big")
 
 
 def set_volume(device_id: int, channel_id: int, volume: int):

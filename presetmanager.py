@@ -92,14 +92,18 @@ class PresetManager:
             mpd_volume = preset_data.mpd_volume
             if mpd_volume > -1:
                 mpd.set_volume(mpd_volume)
-            self.__ultradrive.write(protocoll.set_muted(0, const.MAIN_LEFT_CHANNEL_ID, preset_data.main.muted))
-            self.__ultradrive.write(protocoll.set_muted(0, const.MAIN_RIGHT_CHANNEL_ID, preset_data.main.muted))
-            self.__ultradrive.write(protocoll.set_muted(0, const.SUB_CHANNEL_ID, preset_data.sub.muted))
-            self.__ultradrive.write(protocoll.set_muted(0, const.MAIN_LEFT_CHANNEL_ID, preset_data.main.muted))
+            self.__ultradrive.process_outgoing(
+                protocoll.set_muted(0, const.MAIN_LEFT_CHANNEL_ID, preset_data.main.muted))
+            self.__ultradrive.process_outgoing(
+                protocoll.set_muted(0, const.MAIN_RIGHT_CHANNEL_ID, preset_data.main.muted))
+            self.__ultradrive.process_outgoing(protocoll.set_muted(0, const.SUB_CHANNEL_ID, preset_data.sub.muted))
+            self.__ultradrive.process_outgoing(protocoll.set_muted(0, const.LOUNGE_CHANNEL_ID, preset_data.main.muted))
 
-            self.__ultradrive.write(protocoll.set_volume(0, const.MAIN_LEFT_CHANNEL_ID, preset_data.main.gain))
-            self.__ultradrive.write(protocoll.set_volume(0, const.MAIN_RIGHT_CHANNEL_ID, preset_data.main.gain))
-            self.__ultradrive.write(protocoll.set_volume(0, const.SUB_CHANNEL_ID, preset_data.sub.gain))
-            self.__ultradrive.write(protocoll.set_volume(0, const.MAIN_LEFT_CHANNEL_ID, preset_data.main.gain))
+            self.__ultradrive.process_outgoing(
+                protocoll.set_volume(0, const.MAIN_LEFT_CHANNEL_ID, preset_data.main.gain))
+            self.__ultradrive.process_outgoing(
+                protocoll.set_volume(0, const.MAIN_RIGHT_CHANNEL_ID, preset_data.main.gain))
+            self.__ultradrive.process_outgoing(protocoll.set_volume(0, const.SUB_CHANNEL_ID, preset_data.sub.gain))
+            self.__ultradrive.process_outgoing(protocoll.set_volume(0, const.LOUNGE_CHANNEL_ID, preset_data.main.gain))
 
         return redirect("/preset")
