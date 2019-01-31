@@ -18,7 +18,7 @@ class Echo(serial.threaded.Packetizer):
         command = packet[const.COMMAND_BYTE]
         print(f"handling command {command} for device: {device_id}")
         if command == const.DUMP_RESPONSE:
-            part = packet[const.DUMP_PART_BYTE]
+            part = packet[const.PART_BYTE]
             print(f"handling dump{part}")
             p = self.previous[part]
             self.previous[part] = packet
