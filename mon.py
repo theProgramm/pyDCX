@@ -1,17 +1,42 @@
 import asyncio
 import threading
-from serial import aio
+from typing import Dict
+
 import serial
 import serial.threaded
+from serial import aio
+
+import const
 
 
-class Echo(serial.threaded.Protocol):
+class Echo(serial.threaded.Packetizer):
+    TERMINATOR = const.TERMINATOR
+    last_package: bytes = None
+
+    def handle_packet(self, packet: bytes):
+        if self.last_package is not None:
+            if len(self.last_package) != len(packet):
+                print("size changed!!")
+            else:
+                difs: Dict = {}
+                i = 0
+                diff_started = False
+                diff_start = -1
+                while i < len(self.last_package):
+                    if diff_started:
+                        if self.last_package[i] == packet[i]:
+                            difs[diff_started] = (i, self.last_package[diff_start:i], packet[diff_start:i])
+                            diff_started = False
+                    elif self.last_package[i] == packet[i]:
+                        diff_started = True
+                        diff_start = i
+                if difs:
+                    for (start, v) in iter(difs):
+                        print(f"dif from {start} to {v[0]} changed {v[1]} to {v[2]}")
+
     def connection_made(self, transport):
         self.transport = transport
         print(f"made connection to {transport}")
-
-    def data_received(self, data):
-        print(f"received data: {data}")
 
     def connection_lost(self, exc):
         print(f"lost connection: {exc}")
@@ -61,10 +86,6 @@ def setTM(device_id: int):
         1, "big") + b'\x0E\x3F\x0C\x00\xF7'
 
 
-def testDumps(r):
-    r.write(dump(0, 0))
-    r.write(dump(0, 1))
-
-
 r = ReaderThread()
 r.start()
+r.write(setTM(0))
