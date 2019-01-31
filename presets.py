@@ -5,6 +5,7 @@ from flask import Blueprint, request, redirect
 
 import Ultradrive
 import app
+import mpd
 
 PRESET_PATH = "presets/"
 
@@ -42,4 +43,6 @@ class Presets:
         with open(PRESET_PATH + preset) as f:
             data = json.load(f)
             self.__logger.debug(f"reading preset from file: {preset} got: {data}")
+            mpd.set_volume(data["mpd_level"])
+
         return redirect("/preset")
