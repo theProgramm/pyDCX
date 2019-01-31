@@ -33,13 +33,16 @@ class Echo(serial.threaded.Packetizer):
                     while i < len(p):
                         if diff_started:
                             if p[i] == packet[i]:
-                                difs[diff_start] = [i, p[diff_start:i], packet[diff_start:i]]
+                                last_index = i - 1
+                                difs[diff_start] = [last_index, p[diff_start:i], packet[diff_start:i]]
                                 diff_started = False
                         elif p[i] != packet[i]:
                             diff_started = True
                             diff_start = i
                         i += 1
-                    print(difs)
+                    if difs:
+                        for d in difs:
+                            print(d)
 
     def connection_made(self, transport):
         self.transport = transport
