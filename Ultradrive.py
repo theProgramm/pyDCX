@@ -336,7 +336,7 @@ class Ultadrive(Thread):
                         if len(packet) == const.PART_1_LENGTH:
                             if device.dump1[0] != 0 and device.dump1 != packet:
                                 dif = util.compare_buffer(device.dump1, packet)
-                            self.__logger.warn(f"patch buffer #1 did not recognize something: {dif}")
+                                self.__logger.warn(f"patch buffer #1 did not recognize something: {dif}")
                             device.set_dump1(packet)
                         else:
                             raise RuntimeError(
