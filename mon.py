@@ -19,11 +19,12 @@ class Echo(serial.threaded.Packetizer):
         print(f"handling command {command} for device: {device_id}")
         if command == const.DUMP_RESPONSE:
             part = packet[const.DUMP_PART_BYTE]
+            print(f"handling dump{part}")
             p = self.previous[part]
             self.previous[part] = packet
             if p is not None:
                 if len(p) != len(packet):
-                    print("size changed!!")
+                    print(f"size changed!! {len(p)} -> {len(packet)}")
                 else:
                     difs: Dict = {}
                     i = 0
@@ -50,8 +51,6 @@ class Echo(serial.threaded.Packetizer):
         print(f"lost connection: {exc}")
 
     def write(self, data):
-        while self.transport.serial.in_waiting > 0:
-            pass
         self.transport.write(data)
 
 
