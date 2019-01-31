@@ -38,6 +38,7 @@ class Output:
         self.gain = min(max(-15, int(from_json["gain"])), 15)
         self.limiter = Limiter(from_json["limiter"])
 
+
 @dataclass
 class Preset:
     mpd_volume: int
@@ -88,7 +89,7 @@ class Presets:
 
         with open(PRESET_PATH + preset) as f:
             preset_data = Preset(json.load(f))
-            self.__logger.debug(f"reading preset from file: {preset} got: {data}")
+            self.__logger.debug(f"reading preset from file: {preset} got: {preset_data}")
             mpd_volume = preset_data.mpd_volume
             if mpd_volume > -1:
                 mpd.set_volume(mpd_volume)
@@ -96,4 +97,10 @@ class Presets:
             self.__ultradrive.write(protocoll.set_muted(0, const.MAIN_RIGHT_CHANNEL_ID, preset_data.main.muted))
             self.__ultradrive.write(protocoll.set_muted(0, const.SUB_CHANNEL_ID, preset_data.sub.muted))
             self.__ultradrive.write(protocoll.set_muted(0, const.MAIN_LEFT_CHANNEL_ID, preset_data.main.muted))
+
+            self.__ultradrive.write(protocoll.set_volume(0, const.MAIN_LEFT_CHANNEL_ID, preset_data.main.gain))
+            self.__ultradrive.write(protocoll.set_volume(0, const.MAIN_RIGHT_CHANNEL_ID, preset_data.main.gain))
+            self.__ultradrive.write(protocoll.set_volume(0, const.SUB_CHANNEL_ID, preset_data.sub.gain))
+            self.__ultradrive.write(protocoll.set_volume(0, const.MAIN_LEFT_CHANNEL_ID, preset_data.main.gain))
+
         return redirect("/preset")
