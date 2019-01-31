@@ -1,6 +1,10 @@
 from typing import Dict
 
 
+def asHex(s):
+    return ":".join("{:02x}".format(ord(c)) for c in s)
+
+
 def compare_buffer(buffer1, buffer2):
     if len(buffer1) != len(buffer2):
         return f"size changed!! {len(buffer1)} -> {len(buffer2)}"

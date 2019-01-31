@@ -1,8 +1,11 @@
 import asyncio
 import threading
-from serial import aio
+
 import serial
 import serial.threaded
+from serial import aio
+
+from protocoll import dump
 
 
 class Echo(serial.threaded.Protocol):
@@ -39,26 +42,6 @@ class ReaderThread(threading.Thread):
 
     def write(self, data):
         self.protocol.write(data)
-
-
-def asHex(s):
-    return ":".join("{:02x}".format(ord(c)) for c in s)
-
-
-searchQ = b'\xF0\x00\x20\x32\x20\x0E\x40' + bytes([247])
-
-
-def pingQ(i):
-    return b'\xF0\x00\x20\x32' + i.to_bytes(1, "big") + b'\x0E\x44\x00\x00\xF7'
-
-
-def dump(device_id: int, part: int):
-    return b'\xF0\x00\x20\x32' + device_id.to_bytes(1, "big") + b'\x0E\x50\x01\x00' + part.to_bytes(1, "big") + b'\xF7'
-
-
-def setTM(device_id: int):
-    return b'\xF0\x00\x20\x32' + device_id.to_bytes(
-        1, "big") + b'\x0E\x3F\x0C\x00\xF7'
 
 
 def testDumps(r):

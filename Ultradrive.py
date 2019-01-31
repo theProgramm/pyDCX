@@ -242,7 +242,7 @@ class Ultadrive(Thread):
 
     def search(self):
         self.io_logger.info("searching...")
-        search_command = b'\xF0\x00\x20\x32\x20\x0E\x40' + bytes([247])
+        search_command = protocoll.search()
         self.write(search_command)
         self.io_logger.debug("searching done")
 

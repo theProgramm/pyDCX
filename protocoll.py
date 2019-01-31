@@ -1,6 +1,10 @@
 import math
 
 
+def search():
+    return b'\xF0\x00\x20\x32\x20\x0E\x40\xF7'
+
+
 def ping(device_id: int):
     return b'\xF0\x00\x20\x32' + device_id.to_bytes(1, "big") + b'\x0E\x44\x00\x00\xF7'
 
@@ -24,9 +28,9 @@ def set_muted(device_id: int, channel_id: int, muted: bool):
 
 
 def internal_volume_from_display_value(v: float):
-    return calc_value_bytes(math.floor(v * 10) + 150)
+    return math.floor(v * 10) + 150
 
 
 def set_volume(device_id: int, channel_id: int, volume: int):
     return b'\xf0\x00\x20\x32' + device_id.to_bytes(1, "big") + b'\x0e\x20\x01' + channel_id.to_bytes(1, "big") \
-           + b'\x02' + internal_volume_from_display_value(volume) + b'\xf7'
+           + b'\x02' + calc_value_bytes(internal_volume_from_display_value(volume)) + b'\xf7'
