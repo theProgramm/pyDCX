@@ -26,9 +26,9 @@ VALUE_HI_BYTE = 10
 VALUE_LOW_BYTE = 11
 PART_BYTE = 12
 
-COMMAND_START = bytes([240])
-TERMINATOR = bytes([247])
-TERMINATOR_INT = int.from_bytes(TERMINATOR, "big")
-VENDOR_HEADER = b'\xF0\x00\x20\x32'
+COMMAND_START: bytes = bytes([240])
+TERMINATOR: bytes = bytes([247])
+TERMINATOR_INT: int = int.from_bytes(TERMINATOR, "big")
+VENDOR_HEADER: bytes = b'\xF0\x00\x20\x32'
 
 PORT = "/dev/ttyS0"
