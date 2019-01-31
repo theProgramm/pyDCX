@@ -34,3 +34,17 @@ def internal_volume_from_display_value(v: float):
 def set_volume(device_id: int, channel_id: int, volume: int):
     return b'\xf0\x00\x20\x32' + device_id.to_bytes(1, "big") + b'\x0e\x20\x01' + channel_id.to_bytes(1, "big") \
            + b'\x02' + calc_value_bytes(internal_volume_from_display_value(volume)) + b'\xf7'
+
+
+def set_limiter_on(device_id: int, channel_id: int, on: bool):
+    return b'\xf0\x00\x20\x32' + device_id.to_bytes(1, "big") + b'\x0e\x20\x01' + channel_id.to_bytes(1, "big") \
+           + b'\x46\x00' + (b'\x01' if on else b'\x00') + b'\xf7'
+
+
+def internal_threshold_from_display_value(v: int):
+    return math.floor(v * 10) + 240
+
+
+def set_limiter_threshold(device_id: int, channel_id: int, threshold: int):
+    return b'\xf0\x00\x20\x32' + device_id.to_bytes(1, "big") + b'\x0e\x20\x01' + channel_id.to_bytes(1, "big") \
+           + b'\x47' + calc_value_bytes(internal_threshold_from_display_value(threshold)) + b'\xf7'
