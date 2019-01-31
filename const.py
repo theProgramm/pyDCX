@@ -33,7 +33,7 @@ VENDOR_HEADER: bytes = b'\xF0\x00\x20\x32'
 
 PORT = "/dev/ttyS0"
 
-MAIN_LEFT_CHANNEL_ID: bytes = bytes([5])
-MAIN_RIGHT_CHANNEL_ID: bytes = bytes([6])
-SUB_CHANNEL_ID: bytes = bytes([7])
-LOUNGE_CHANNEL_ID: bytes = bytes([8])
+MAIN_LEFT_CHANNEL_ID: int = 5
+MAIN_RIGHT_CHANNEL_ID: int = 6
+SUB_CHANNEL_ID: int= 7
+LOUNGE_CHANNEL_ID: int = 8

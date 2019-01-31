@@ -1,13 +1,55 @@
 import json
+import math
 import os
+from dataclasses import dataclass
 
 from flask import Blueprint, request, redirect
 
 import Ultradrive
 import app
+import const
 import mpd
+import protocoll
 
 PRESET_PATH = "presets/"
+
+
+@dataclass
+class Limiter:
+    on: bool = False
+    threshold: int = 0
+
+    def __init__(self, from_json: dict = None):
+        if from_json is not None:
+            self.on = bool(from_json["on"])
+            self.threshold = min(max(-24, int(from_json["gain"])), 0)
+
+
+@dataclass
+class Output:
+    muted: bool
+    gain: int
+    limiter: Limiter
+
+    def __init__(self, from_json: dict):
+        if from_json is None:
+            raise ValueError("no data provided")
+        self.muted = bool(from_json["muted"])
+        self.gain = min(max(-15, int(from_json["gain"])), 15)
+        self.limiter = Limiter(from_json["limiter"])
+
+@dataclass
+class Preset:
+    mpd_volume: int
+    main: Output
+    sub: Output
+    lounge: Output
+
+    def __init__(self, from_json: dict):
+        self.mpd_volume = min(max(-1, int(from_json["mpd_level"])), 100)
+        self.main = Output(from_json["main"])
+        self.sub = Output(from_json["sub"])
+        self.lounge = Output(from_json["lounge"])
 
 
 class Presets:
@@ -45,8 +87,13 @@ class Presets:
             return "not available", 502
 
         with open(PRESET_PATH + preset) as f:
-            data = json.load(f)
+            preset_data = Preset(json.load(f))
             self.__logger.debug(f"reading preset from file: {preset} got: {data}")
-            mpd.set_volume(data["mpd_level"])
-
+            mpd_volume = preset_data.mpd_volume
+            if mpd_volume > -1:
+                mpd.set_volume(mpd_volume)
+            self.__ultradrive.write(protocoll.set_muted(0, const.MAIN_LEFT_CHANNEL_ID, preset_data.main.muted))
+            self.__ultradrive.write(protocoll.set_muted(0, const.MAIN_RIGHT_CHANNEL_ID, preset_data.main.muted))
+            self.__ultradrive.write(protocoll.set_muted(0, const.SUB_CHANNEL_ID, preset_data.sub.muted))
+            self.__ultradrive.write(protocoll.set_muted(0, const.MAIN_LEFT_CHANNEL_ID, preset_data.main.muted))
         return redirect("/preset")
