@@ -42,7 +42,7 @@ class Presets:
 
         device: Ultradrive.Device = self.__ultradrive.device(0)
         if device is None:
-            return "not available", 401  # FIXME use correct status code
+            return "not available", 502
 
         with open(PRESET_PATH + preset) as f:
             data = json.load(f)
