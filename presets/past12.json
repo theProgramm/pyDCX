@@ -1,0 +1,27 @@
+{
+  "mpd_level": -1,
+  "main": {
+    "muted": false,
+    "gain": 0,
+    "limiter": {
+      "on": false,
+      "threshold": 0
+    }
+  },
+  "sub": {
+    "muted": false,
+    "gain": -3,
+    "limiter": {
+      "on": false,
+      "threshold": 0
+    }
+  },
+  "lounge": {
+    "muted": false,
+    "gain": -13,
+    "limiter": {
+      "on": false,
+      "threshold": 0
+    }
+  }
+}
