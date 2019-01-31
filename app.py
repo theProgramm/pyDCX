@@ -18,7 +18,7 @@ class Data:
         logging.getLogger('flask.app.').setLevel(logging.ERROR)
         logging.getLogger('flask.app.api.http').setLevel(logging.INFO)
         logging.getLogger('flask.app.ultradrive').setLevel(logging.INFO)
-        logging.getLogger('flask.app.ultradrive.io').setLevel(logging.INFO)
+        logging.getLogger('flask.app.ultradrive.io').setLevel(logging.DEBUG)
         logging.getLogger('flask.app.ultradrive.packet').setLevel(logging.INFO)
 
         self.fetch_frontend_statics()

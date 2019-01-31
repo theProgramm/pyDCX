@@ -235,8 +235,8 @@ class Ultadrive(Thread):
 
     def write(self, data):
         if self.__serial.isOpen():
-            self.io_logger.debug(f"writing {data}")
             self.__serial.write(data)
+            self.io_logger.debug(f"wrote {data}")
         else:
             raise RuntimeError("serial port not open when trying to write")
 
@@ -308,7 +308,7 @@ class Ultadrive(Thread):
                 self.packet_logger.debug(f"handling packet {packet}")
                 device_id = packet[const.ID_BYTE]
                 command = packet[const.COMMAND_BYTE]
-                self.packet_logger.info(f"handling command {command} for device: {device_id}")
+                self.packet_logger.debug(f"handling command {command} for device: {device_id}")
                 if device_id not in self.__devices:
                     self.packet_logger.warning(f"received command: {command} from unknown device_id: {device_id}")
                     device = Device(device_id)
