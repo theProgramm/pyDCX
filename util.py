@@ -23,7 +23,7 @@ def compare_buffer(buffer1, buffer2):
             s = "found difs: "
             for start in difs:
                 s += f"from {start} to {difs[start][0]} changed "
-                s += f"{difs[start][1].replace('bytearray', '')} to {difs[start][2].replace('bytearray', '')}"
+                s += f"{difs[start][1]} to {difs[start][2]}"
         else:
             s = "no difs"
-        return s
+        return s.replace('bytearray', '')
