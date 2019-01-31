@@ -324,19 +324,19 @@ class Ultadrive(Thread):
                     part: int = packet[const.PART_BYTE]
                     if part == 0:
                         if len(packet) == const.PART_0_LENGTH:
-                            if device.dump0 != packet:
-                                # difs = util.compare_buffer(device.dump0, packet)
+                            if device.dump0[0] != 0 and device.dump0 != packet:
                                 self.__logger.warn(
-                                    f"patch buffer #0 did not recognize something.")
+                                    f"patch buffer #0 did not recognize something. buffer then extern: \n{device.dump0}\n\n{packet}")
+                            device.set_dump0(packet)
                         else:
                             raise RuntimeError(
                                 self.exception_text("dump response #0", len(packet), const.PART_0_LENGTH, packet))
                     elif part == 1:
                         if len(packet) == const.PART_1_LENGTH:
-                            if device.dump1 != packet:
-                                # difs = util.compare_buffer(device.dump0, packet)
+                            if device.dump1[0] != 0 and device.dump1 != packet:
                                 self.__logger.warn(
-                                    f"patch buffer #1 did not recognize something.")
+                                    f"patch buffer #1 did not recognize something. buffer then extern: \n{device.dump1}\n\n{packet}")
+                            device.set_dump1(packet)
                         else:
                             raise RuntimeError(
                                 self.exception_text("dump response #1", len(packet), const.PART_1_LENGTH, packet))
