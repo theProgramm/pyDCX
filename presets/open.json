@@ -1,8 +1,8 @@
 {
-  "mpd_level": -1,
+  "mpd_level": 75,
   "main": {
     "muted": false,
-    "gain": 0,
+    "gain": 5,
     "limiter": {
       "on": false,
       "threshold": 0
@@ -10,15 +10,15 @@
   },
   "sub": {
     "muted": false,
-    "gain": 6,
+    "gain": -3.8,
     "limiter": {
       "on": false,
       "threshold": 0
     }
   },
   "lounge": {
-    "muted": false,
-    "gain": -10,
+    "muted": true,
+    "gain": -15,
     "limiter": {
       "on": false,
       "threshold": 0
