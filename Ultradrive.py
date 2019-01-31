@@ -236,7 +236,7 @@ class Ultadrive(Thread):
             self.io_logger.debug(f"writing {data}")
             self.__serial.write(data)
         else:
-            raise RuntimeError("serial port not open.json when trying to write")
+            raise RuntimeError("serial port not open when trying to write")
 
     def search(self):
         self.io_logger.info("searching...")
