@@ -9,7 +9,6 @@ import serial
 import buffer
 import const
 import protocoll
-import util
 
 PING_INTERVAL = timedelta(milliseconds=const.PING_INTEVAL)
 SEARCH_INTERVAL = timedelta(milliseconds=const.SEARCH_INTERVAL)
@@ -326,18 +325,18 @@ class Ultadrive(Thread):
                     if part == 0:
                         if len(packet) == const.PART_0_LENGTH:
                             if device.dump0 != packet:
-                                difs = util.compare_buffer(device.dump0, packet)
+                                # difs = util.compare_buffer(device.dump0, packet)
                                 self.__logger.warn(
-                                    f"patch buffer #0 did not recognize something. Diff: {difs}")
+                                    f"patch buffer #0 did not recognize something.")
                         else:
                             raise RuntimeError(
                                 self.exception_text("dump response #0", len(packet), const.PART_0_LENGTH, packet))
                     elif part == 1:
                         if len(packet) == const.PART_1_LENGTH:
                             if device.dump1 != packet:
-                                difs = util.compare_buffer(device.dump0, packet)
+                                # difs = util.compare_buffer(device.dump0, packet)
                                 self.__logger.warn(
-                                    f"patch buffer #1 did not recognize something.Diff: {difs}")
+                                    f"patch buffer #1 did not recognize something.")
                         else:
                             raise RuntimeError(
                                 self.exception_text("dump response #1", len(packet), const.PART_1_LENGTH, packet))
