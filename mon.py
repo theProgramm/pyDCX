@@ -1,12 +1,12 @@
 import asyncio
 import threading
-from typing import Dict
 
 import serial
 import serial.threaded
 from serial import aio
 
 import const
+import util
 
 
 class Echo(serial.threaded.Packetizer):
@@ -26,23 +26,7 @@ class Echo(serial.threaded.Packetizer):
                 if len(p) != len(packet):
                     print(f"size changed!! {len(p)} -> {len(packet)}")
                 else:
-                    difs: Dict[int, list] = {}
-                    i = 0
-                    diff_started = False
-                    diff_start = -1
-                    while i < len(p):
-                        if diff_started:
-                            if p[i] == packet[i]:
-                                last_index = i - 1
-                                difs[diff_start] = [last_index, p[diff_start:i], packet[diff_start:i]]
-                                diff_started = False
-                        elif p[i] != packet[i]:
-                            diff_started = True
-                            diff_start = i
-                        i += 1
-                    if difs:
-                        for start in difs:
-                            print(f"dif from {start} to {difs[start][0]} changed {difs[start][1]} to {difs[start][2]}")
+                    print(util.compare_buffer(p, packet))
 
     def connection_made(self, transport):
         self.transport = transport
