@@ -153,7 +153,7 @@ class Device:
     def update_from_outgoing_command(self, out_string):
         with self.lock:
             command: int = out_string[const.COMMAND_BYTE]
-            if command != const.DIRECT_COMMAND:
+            if command != const.DIRECT_COMMAND_RESPONSE:
                 raise RuntimeError(f"command is no direct command")
             count = out_string[const.PARAM_COUNT_BYTE]
             for i in range(count):
@@ -350,7 +350,7 @@ class Ultadrive(Thread):
                     else:
                         raise RuntimeError(
                             self.exception_text("ping response", len(packet), const.PING_RESPONSE_LENGTH, packet))
-                elif command == const.DIRECT_COMMAND:
+                elif command == const.DIRECT_COMMAND_RESPONSE:
                     device.update_from_command(packet)
                 else:
                     raise RuntimeError(f"received malformed response - unrecognized command {command}")
