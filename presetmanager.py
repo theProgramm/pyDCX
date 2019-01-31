@@ -92,20 +92,21 @@ class PresetManager:
             mpd_volume = preset_data.mpd_volume
             if mpd_volume > -1:
                 mpd.set_volume(mpd_volume)
-            self.__ultradrive.process_outgoing(
-                protocoll.set_muted(0, const.MAIN_LEFT_CHANNEL_ID, preset_data.main.muted))
-            self.__ultradrive.process_outgoing(
-                protocoll.set_muted(0, const.MAIN_RIGHT_CHANNEL_ID, preset_data.main.muted))
-            self.__ultradrive.process_outgoing(protocoll.set_muted(0, const.SUB_CHANNEL_ID, preset_data.sub.muted))
-            self.__ultradrive.process_outgoing(
-                protocoll.set_muted(0, const.LOUNGE_CHANNEL_ID, preset_data.lounge.muted))
+            command = protocoll.DirectCommand()
+            command.add_param(
+                protocoll.set_muted_param(const.MAIN_LEFT_CHANNEL_ID, preset_data.main.muted))
+            command.add_param(
+                protocoll.set_muted_param(const.MAIN_RIGHT_CHANNEL_ID, preset_data.main.muted))
+            command.add_param(protocoll.set_muted_param(const.SUB_CHANNEL_ID, preset_data.sub.muted))
+            command.add_param(
+                protocoll.set_muted_param(const.LOUNGE_CHANNEL_ID, preset_data.lounge.muted))
 
-            self.__ultradrive.process_outgoing(
-                protocoll.set_volume(0, const.MAIN_LEFT_CHANNEL_ID, preset_data.main.gain))
-            self.__ultradrive.process_outgoing(
-                protocoll.set_volume(0, const.MAIN_RIGHT_CHANNEL_ID, preset_data.main.gain))
-            self.__ultradrive.process_outgoing(protocoll.set_volume(0, const.SUB_CHANNEL_ID, preset_data.sub.gain))
-            self.__ultradrive.process_outgoing(
-                protocoll.set_volume(0, const.LOUNGE_CHANNEL_ID, preset_data.lounge.gain))
-
+            command.add_param(
+                protocoll.set_volume_param(const.MAIN_LEFT_CHANNEL_ID, preset_data.main.gain))
+            command.add_param(
+                protocoll.set_volume_param(const.MAIN_RIGHT_CHANNEL_ID, preset_data.main.gain))
+            command.add_param(protocoll.set_volume_param(const.SUB_CHANNEL_ID, preset_data.sub.gain))
+            command.add_param(
+                protocoll.set_volume_param(const.LOUNGE_CHANNEL_ID, preset_data.lounge.gain))
+            self.__ultradrive.process_outgoing(command.as_bytes(0))
         return redirect("/preset")
