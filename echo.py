@@ -5,7 +5,7 @@ import serial
 import serial.threaded
 from serial import aio
 
-from protocoll import dump
+from protocoll import *
 
 
 class Echo(serial.threaded.Protocol):
