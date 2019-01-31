@@ -26,14 +26,14 @@ class Echo(serial.threaded.Packetizer):
                 if len(p) != len(packet):
                     print(f"size changed!! {len(p)} -> {len(packet)}")
                 else:
-                    difs: Dict = {}
+                    difs: Dict[int, list] = {}
                     i = 0
                     diff_started = False
                     diff_start = -1
                     while i < len(p):
                         if diff_started:
                             if p[i] == packet[i]:
-                                difs[diff_started] = (i, p[diff_start:i], packet[diff_start:i])
+                                difs[diff_started] = [i, p[diff_start:i], packet[diff_start:i]]
                                 diff_started = False
                         elif p[i] == packet[i]:
                             diff_started = True
