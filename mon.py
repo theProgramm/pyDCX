@@ -33,16 +33,15 @@ class Echo(serial.threaded.Packetizer):
                     while i < len(p):
                         if diff_started:
                             if p[i] == packet[i]:
-                                difs[diff_started] = [i, p[diff_start:i], packet[diff_start:i]]
+                                difs[diff_start] = [i, p[diff_start:i], packet[diff_start:i]]
                                 diff_started = False
                         elif p[i] == packet[i]:
                             diff_started = True
                             diff_start = i
                         i += 1
-                    print(difs)
-                    # if len.dif:
-                    #     for (start, v) in iter(difs):
-                    #         print(f"dif from {start} to {v[0]} changed {v[1]} to {v[2]}")
+                    if len.dif:
+                        for (start, v) in iter(difs):
+                            print(f"dif from {start} to {v[0]} changed {v[1]} to {v[2]}")
 
     def connection_made(self, transport):
         self.transport = transport
