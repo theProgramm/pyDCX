@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
 </head>
-<body>
+<body style="font-size: larger">
 <form id="preset_form" name="preset" action="/api/preset" method="post">
     <label for="preset_select">load preset:
         <select name="selection" form="preset_form" id="preset_select" autofocus required>
@@ -21,7 +21,7 @@
 <script type="text/javascript">
     document.getElementById("preset_select").onchange = function () {
         document.getElementById("preset_form").submit()
-    }
+    };
     document.getElementById("submit_button").hidden = true
 </script>
 </body>
