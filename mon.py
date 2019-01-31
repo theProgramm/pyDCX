@@ -11,32 +11,40 @@ import const
 
 class Echo(serial.threaded.Packetizer):
     TERMINATOR = const.TERMINATOR
-    last_package: bytes = None
+    previous: list[bytes, bytes] = [None, None]
 
     def handle_packet(self, packet: bytes):
-        if self.last_package is not None:
-            if len(self.last_package) != len(packet):
-                print("size changed!!")
-            else:
-                difs: Dict = {}
-                i = 0
-                diff_started = False
-                diff_start = -1
-                while i < len(self.last_package):
-                    if diff_started:
-                        if self.last_package[i] == packet[i]:
-                            difs[diff_started] = (i, self.last_package[diff_start:i], packet[diff_start:i])
-                            diff_started = False
-                    elif self.last_package[i] == packet[i]:
-                        diff_started = True
-                        diff_start = i
-                if difs:
-                    for (start, v) in iter(difs):
-                        print(f"dif from {start} to {v[0]} changed {v[1]} to {v[2]}")
+        device_id = packet[const.ID_BYTE]
+        command = packet[const.COMMAND_BYTE]
+        print(f"handling command {command} for device: {device_id}")
+        if command == const.DUMP_RESPONSE:
+            part = packet[const.DUMP_PART_BYTE]
+            p = self.previous[part]
+            self.previous[part] = packet
+            if p is not None:
+                if len(p) != len(packet):
+                    print("size changed!!")
+                else:
+                    difs: Dict = {}
+                    i = 0
+                    diff_started = False
+                    diff_start = -1
+                    while i < len(p):
+                        if diff_started:
+                            if p[i] == packet[i]:
+                                difs[diff_started] = (i, p[diff_start:i], packet[diff_start:i])
+                                diff_started = False
+                        elif p[i] == packet[i]:
+                            diff_started = True
+                            diff_start = i
+                    if difs:
+                        for (start, v) in iter(difs):
+                            print(f"dif from {start} to {v[0]} changed {v[1]} to {v[2]}")
 
     def connection_made(self, transport):
         self.transport = transport
         print(f"made connection to {transport}")
+        self.write(setTM(0))
 
     def connection_lost(self, exc):
         print(f"lost connection: {exc}")
@@ -88,4 +96,3 @@ def setTM(device_id: int):
 
 r = ReaderThread()
 r.start()
-r.write(setTM(0))
