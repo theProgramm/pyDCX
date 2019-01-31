@@ -41,8 +41,8 @@ class Echo(serial.threaded.Packetizer):
                             diff_start = i
                         i += 1
                     if difs:
-                        for d in difs:
-                            print(d)
+                        for start in difs:
+                            print(f"dif from {start} to {difs[start][0]} changed {difs[start][1]} to {difs[start][2]}")
 
     def connection_made(self, transport):
         self.transport = transport
