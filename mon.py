@@ -11,7 +11,7 @@ import const
 
 class Echo(serial.threaded.Packetizer):
     TERMINATOR = const.TERMINATOR
-    previous: list[bytes, bytes] = [None, None]
+    previous: list = [None, None]
 
     def handle_packet(self, packet: bytes):
         device_id = packet[const.ID_BYTE]
