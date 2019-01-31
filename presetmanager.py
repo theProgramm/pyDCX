@@ -97,13 +97,15 @@ class PresetManager:
             self.__ultradrive.process_outgoing(
                 protocoll.set_muted(0, const.MAIN_RIGHT_CHANNEL_ID, preset_data.main.muted))
             self.__ultradrive.process_outgoing(protocoll.set_muted(0, const.SUB_CHANNEL_ID, preset_data.sub.muted))
-            self.__ultradrive.process_outgoing(protocoll.set_muted(0, const.LOUNGE_CHANNEL_ID, preset_data.main.muted))
+            self.__ultradrive.process_outgoing(
+                protocoll.set_muted(0, const.LOUNGE_CHANNEL_ID, preset_data.lounge.muted))
 
             self.__ultradrive.process_outgoing(
                 protocoll.set_volume(0, const.MAIN_LEFT_CHANNEL_ID, preset_data.main.gain))
             self.__ultradrive.process_outgoing(
                 protocoll.set_volume(0, const.MAIN_RIGHT_CHANNEL_ID, preset_data.main.gain))
             self.__ultradrive.process_outgoing(protocoll.set_volume(0, const.SUB_CHANNEL_ID, preset_data.sub.gain))
-            self.__ultradrive.process_outgoing(protocoll.set_volume(0, const.LOUNGE_CHANNEL_ID, preset_data.main.gain))
+            self.__ultradrive.process_outgoing(
+                protocoll.set_volume(0, const.LOUNGE_CHANNEL_ID, preset_data.lounge.gain))
 
         return redirect("/preset")
