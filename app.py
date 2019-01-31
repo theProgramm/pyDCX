@@ -6,7 +6,7 @@ from flask import Flask, send_from_directory, request
 from Ultradrive import Ultadrive
 from api import Api
 from const import FRONTEND_PATH
-from presets import Presets
+from presets import PresetManager
 
 
 class Data:
@@ -26,7 +26,7 @@ class Data:
 
         self.ultradrive = Ultadrive(app.logger)
         self.__api = Api(app.logger, self.ultradrive)
-        self.__presets = Presets(app.logger, self.ultradrive)
+        self.__presets = PresetManager(app.logger, self.ultradrive)
         self.start_serial()
 
         app.register_blueprint(self.__api.api)

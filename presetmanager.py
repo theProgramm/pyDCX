@@ -52,7 +52,7 @@ class Preset:
         self.lounge = Output(from_json["lounge"])
 
 
-class Presets:
+class PresetManager:
     blue_print: Blueprint
     __ultradrive: Ultradrive
 
