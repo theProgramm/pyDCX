@@ -6,7 +6,7 @@ from flask import Flask, send_from_directory, request
 from Ultradrive import Ultadrive
 from api import Api
 from const import FRONTEND_PATH
-from presets import PresetManager
+from presetmanager import PresetManager
 
 
 class Data:
