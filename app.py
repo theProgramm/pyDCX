@@ -12,14 +12,13 @@ from const import FRONTEND_PATH
 class Data:
     def __init__(self):
         self.static_files = []
-        logging.getLogger('apscheduler').setLevel(logging.INFO)
         logging.getLogger('flask').setLevel(logging.DEBUG)
         logging.getLogger('werkzeug').setLevel(logging.ERROR)
         logging.getLogger('flask.app.').setLevel(logging.ERROR)
         logging.getLogger('flask.app.api.http').setLevel(logging.INFO)
         logging.getLogger('flask.app.ultradrive').setLevel(logging.INFO)
-        logging.getLogger('flask.app.ultradrive.io').setLevel(logging.DEBUG)
-        logging.getLogger('flask.app.ultradrive.packet').setLevel(logging.INFO)
+        logging.getLogger('flask.app.ultradrive.io').setLevel(logging.WARN)
+        logging.getLogger('flask.app.ultradrive.packet').setLevel(logging.WARN)
 
         self.fetch_frontend_statics()
 
