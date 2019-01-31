@@ -77,6 +77,7 @@ class Device:
         with self.lock:
             with self.dump_counter:
                 with self.dump_counter:
+                    ultradrive.packet_logger.debug("updating buffer")
                     self.update_from_outgoing_command(command)
                     ultradrive.write(command)
 
