@@ -24,7 +24,7 @@ def calc_value_bytes(value: int):
 
 def set_muted(device_id: int, channel_id: int, muted: bool):
     return b'\xf0\x00\x20\x32' + device_id.to_bytes(1, "big") + b'\x0e\x20\x01' + channel_id.to_bytes(1, "big") \
-           + b'\x00\x03' + (b'\x01' if muted else b'\x00') + b'\xf7'
+           + b'\x03\x00' + (b'\x01' if muted else b'\x00') + b'\xf7'
 
 
 def internal_volume_from_display_value(v: float):
