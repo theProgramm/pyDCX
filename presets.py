@@ -1,5 +1,4 @@
 import json
-import math
 import os
 from dataclasses import dataclass
 
@@ -22,7 +21,7 @@ class Limiter:
     def __init__(self, from_json: dict = None):
         if from_json is not None:
             self.on = bool(from_json["on"])
-            self.threshold = min(max(-24, int(from_json["gain"])), 0)
+            self.threshold = min(max(-24, int(from_json["threshold"])), 0)
 
 
 @dataclass
@@ -79,17 +78,17 @@ class Presets:
 
     def preset(self):
         self.__logger.debug(f"preset args: {request.form.to_dict()}")
-        preset = request.form["selection"]
-        if preset not in self.__preset_files:
+        preset_filename = request.form["selection"] + ".json"
+        if preset_filename not in self.__preset_files:
             return "not found", 404
 
         device: Ultradrive.Device = self.__ultradrive.device(0)
         if device is None:
             return "not available", 502
 
-        with open(PRESET_PATH + preset) as f:
+        with open(PRESET_PATH + preset_filename) as f:
             preset_data = Preset(json.load(f))
-            self.__logger.debug(f"reading preset from file: {preset} got: {preset_data}")
+            self.__logger.debug(f"reading preset from file: {preset_filename} got: {preset_data}")
             mpd_volume = preset_data.mpd_volume
             if mpd_volume > -1:
                 mpd.set_volume(mpd_volume)
