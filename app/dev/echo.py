@@ -5,7 +5,7 @@ import serial
 import serial.threaded
 from serial import aio
 
-from protocoll import *
+from app.ultradrive.protocoll import *
 
 
 class Echo(serial.threaded.Protocol):

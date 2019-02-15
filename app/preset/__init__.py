@@ -4,11 +4,8 @@ from dataclasses import dataclass
 
 from flask import Blueprint, request, redirect
 
-import Ultradrive
-import app
-import const
-import mpd
-import protocoll
+from app import mpd, Ultradrive, app, settings
+from app.ultradrive import protocoll
 
 PRESET_PATH = "presets/"
 
@@ -82,7 +79,7 @@ class PresetManager:
         if preset_filename not in self.__preset_files:
             return "not found", 404
 
-        device: Ultradrive.Device = self.__ultradrive.device(0)
+        device: app.Ultradrive.Device = self.__ultradrive.device(0)
         if device is None:
             return "not available", 502
 
@@ -94,19 +91,19 @@ class PresetManager:
                 mpd.set_volume(mpd_volume)
             command = protocoll.DirectCommand()
             command.add_param(
-                protocoll.set_muted_param(const.MAIN_LEFT_CHANNEL_ID, preset_data.main.muted))
+                protocoll.set_muted_param(settings.MAIN_LEFT_CHANNEL_ID, preset_data.main.muted))
             command.add_param(
-                protocoll.set_muted_param(const.MAIN_RIGHT_CHANNEL_ID, preset_data.main.muted))
-            command.add_param(protocoll.set_muted_param(const.SUB_CHANNEL_ID, preset_data.sub.muted))
+                protocoll.set_muted_param(settings.MAIN_RIGHT_CHANNEL_ID, preset_data.main.muted))
+            command.add_param(protocoll.set_muted_param(settings.SUB_CHANNEL_ID, preset_data.sub.muted))
             command.add_param(
-                protocoll.set_muted_param(const.LOUNGE_CHANNEL_ID, preset_data.lounge.muted))
+                protocoll.set_muted_param(settings.LOUNGE_CHANNEL_ID, preset_data.lounge.muted))
 
             command.add_param(
-                protocoll.set_volume_param(const.MAIN_LEFT_CHANNEL_ID, preset_data.main.gain))
+                protocoll.set_volume_param(settings.MAIN_LEFT_CHANNEL_ID, preset_data.main.gain))
             command.add_param(
-                protocoll.set_volume_param(const.MAIN_RIGHT_CHANNEL_ID, preset_data.main.gain))
-            command.add_param(protocoll.set_volume_param(const.SUB_CHANNEL_ID, preset_data.sub.gain))
+                protocoll.set_volume_param(settings.MAIN_RIGHT_CHANNEL_ID, preset_data.main.gain))
+            command.add_param(protocoll.set_volume_param(settings.SUB_CHANNEL_ID, preset_data.sub.gain))
             command.add_param(
-                protocoll.set_volume_param(const.LOUNGE_CHANNEL_ID, preset_data.lounge.gain))
+                protocoll.set_volume_param(settings.LOUNGE_CHANNEL_ID, preset_data.lounge.gain))
             self.__ultradrive.process_outgoing(command.as_bytes(0))
         return redirect("/preset")

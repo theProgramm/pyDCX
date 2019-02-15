@@ -4,7 +4,7 @@ import flask
 from flask import Blueprint
 from flask import request
 
-import Ultradrive
+from app import Ultradrive
 
 
 class Api:
@@ -32,7 +32,7 @@ class Api:
     def device(self, n: int):
         try:
             s = self.__ultradrive.device(n).to_gui()
-        except KeyError as e:
+        except KeyError:
             return "not found", 404
         self.__http_logger.debug(f"device({n}) -> {s}")
         return flask.make_response(s)

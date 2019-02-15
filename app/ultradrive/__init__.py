@@ -6,14 +6,13 @@ from typing import Dict
 
 import serial
 
-import buffer
-import const
-import protocoll
-import util
+from app import settings
+from app.settings import PING_INTEVAL, SEARCH_INTERVAL, TIMEOUT_TIME
+from app.ultradrive import buffer, protocoll, const
 
-PING_INTERVAL = timedelta(milliseconds=const.PING_INTEVAL)
-SEARCH_INTERVAL = timedelta(milliseconds=const.SEARCH_INTERVAL)
-TIMEOUT = timedelta(milliseconds=const.TIMEOUT_TIME)
+PING_INTERVAL = timedelta(milliseconds=PING_INTEVAL)
+SEARCH_INTERVAL = timedelta(milliseconds=SEARCH_INTERVAL)
+TIMEOUT = timedelta(milliseconds=TIMEOUT_TIME)
 
 NULL_TIME = datetime(1970, 1, 1)
 
@@ -183,9 +182,9 @@ class Device:
                     return ret
 
 
-class Ultadrive(Thread):
+class Ultradrive(Thread):
     def __init__(self, logger):
-        super(Ultadrive, self).__init__()
+        super(Ultradrive, self).__init__()
         self.__logger = logger.getChild("ultradrive")
         self.io_logger = self.__logger.getChild("io")
         self.packet_logger = self.__logger.getChild("packet")
@@ -250,7 +249,7 @@ class Ultadrive(Thread):
         self.__logger.info(f"starting new ultradrive thread")
         try:
             self.__logger.debug("try connecting...")
-            self.__serial.port = const.PORT
+            self.__serial.port = settings.PORT
             self.__serial.open()
             atexit.register(self.stop)
             self.__logger.debug("connecting not failed - looping")
@@ -327,7 +326,7 @@ class Ultadrive(Thread):
                     if part == 0:
                         if len(packet) == const.PART_0_LENGTH:
                             if device.dump0[0] != 0 and device.dump0 != packet:
-                                dif = util.compare_buffer(device.dump0, packet)
+                                dif = compare_buffer(device.dump0, packet)
                                 self.__logger.warn(f"patch buffer #0 did not recognize something: {dif}")
                             device.set_dump0(packet)
                         else:
@@ -336,7 +335,7 @@ class Ultadrive(Thread):
                     elif part == 1:
                         if len(packet) == const.PART_1_LENGTH:
                             if device.dump1[0] != 0 and device.dump1 != packet:
-                                dif = util.compare_buffer(device.dump1, packet)
+                                dif = compare_buffer(device.dump1, packet)
                                 self.__logger.warn(f"patch buffer #1 did not recognize something: {dif}")
                             device.set_dump1(packet)
                         else:
@@ -373,6 +372,34 @@ class Ultadrive(Thread):
         device_id: int = out_string[const.ID_BYTE]
         self.__devices[device_id].write_command(self, out_string)
         return device_id
+
+
+def compare_buffer(buffer1, buffer2):
+    if len(buffer1) != len(buffer2):
+        return f"size changed!! {len(buffer1)} -> {len(buffer2)}"
+    else:
+        difs: Dict[int, list] = {}
+        i = 0
+        diff_started = False
+        diff_start = -1
+        while i < len(buffer1):
+            if diff_started:
+                if buffer1[i] == buffer2[i]:
+                    last_index = i - 1
+                    difs[diff_start] = [last_index, buffer1[diff_start:i], buffer2[diff_start:i]]
+                    diff_started = False
+            elif buffer1[i] != buffer2[i]:
+                diff_started = True
+                diff_start = i
+            i += 1
+        if difs:
+            s = "found difs: "
+            for start in difs:
+                s += f"from {start} to {difs[start][0]} changed "
+                s += f"{difs[start][1]} to {difs[start][2]}"
+        else:
+            s = "no difs"
+        return s.replace('bytearray', '')
 
 # void Ultradrive::processIncoming(unsigned long now) {
 #   while (serial->available() > 0) {

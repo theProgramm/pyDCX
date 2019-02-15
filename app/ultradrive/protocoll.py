@@ -2,7 +2,7 @@ import math
 from dataclasses import dataclass
 from typing import List
 
-import const
+from app.ultradrive.const import VENDOR_HEADER, TERMINATOR
 
 
 @dataclass
@@ -19,8 +19,8 @@ class Query:
         self.data = data if data is not None else bytes([])
 
     def as_bytes(self) -> bytes:
-        return const.VENDOR_HEADER + self.device_id.to_bytes(1, "big") + b'\x0E' \
-               + self.command.to_bytes(1, "big") + self.data + const.TERMINATOR
+        return VENDOR_HEADER + self.device_id.to_bytes(1, "big") + b'\x0E' \
+               + self.command.to_bytes(1, "big") + self.data + TERMINATOR
 
 
 @dataclass
@@ -53,9 +53,6 @@ class DirectCommand:
 
     def __init__(self):
         self.params = []
-
-    def add_new_param(self, func: int, value: int = None, direct_params: bytes = None) -> None:
-        self.params.append(DirectCommandParameter(func, value=value, direct_params=direct_params))
 
     def add_param(self, param: DirectCommandParameter):
         self.params.append(param)

@@ -1,10 +1,6 @@
-import logging
-from logging import Logger
 from unittest import TestCase
 
-import Ultradrive
-import protocoll
-import util
+from app.ultradrive import protocoll
 
 
 class TestDevice(TestCase):

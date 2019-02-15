@@ -5,8 +5,7 @@ import serial
 import serial.threaded
 from serial import aio
 
-import const
-import util
+from app.ultradrive import const, compare_buffer
 
 
 class Echo(serial.threaded.Packetizer):
@@ -26,7 +25,7 @@ class Echo(serial.threaded.Packetizer):
                 if len(p) != len(packet):
                     print(f"size changed!! {len(p)} -> {len(packet)}")
                 else:
-                    print(util.compare_buffer(p, packet))
+                    print(compare_buffer(p, packet))
 
     def connection_made(self, transport):
         self.transport = transport
